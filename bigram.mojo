@@ -195,43 +195,7 @@ def main() raises:
     print("Tokenizer len: ", len(tok))
     var data = Tensor[INT].d1(tok.encode(text^))
     var dataset = Dataset(data^)
-    ref train_data = dataset.train_ds()
-    ref val_data = dataset.val_ds()
-    var x = train_data[:block_size]
-    var y = train_data[1 : block_size + 1]
-    print()
-    for t in range(block_size):
-        var context = x[: t + 1]
-        var target = y[t]
-        print("When context: ", end="")
-        context.print(header=False)
-        print(" target is: ", target)
-
-    var (xb, yb) = dataset.get_batch("train")
-    print("Inputs: \n")
-    print(xb.shape())
-    xb.print(header=False)
-    print("Targets: \n")
-    print(yb.shape())
-    print()
-    yb.print(header=False)
-    print("-----")
-
-    for b in range(batch_size):
-        for t in range(block_size):
-            var context = xb[Indexer(b), Slicer(0, t + 1)]
-            var target = yb[b, t]
-            print(
-                "When input is {0}, target = {1}".format(
-                    context.tolist(), target
-                )
-            )
-
     var model = BigramModel(vocab_size)
-    var (logits, loss) = model(xb^, yb)
-    print(logits.shape())
-    if loss:
-        loss.value().print()
 
     print(
         tok.decode(
@@ -279,4 +243,3 @@ def main() raises:
                 ),
                 end="\n",
             )
-
