@@ -1,7 +1,10 @@
 from std.pathlib import Path
 from std.os.process import Process
 from std.collections import Set
+from std.utils.numerics import neg_inf
+from std.math import sqrt
 from std.testing import assert_true
+
 
 from tenmo.tensor import Tensor
 from bpe import BPETokenizer
@@ -11,10 +14,12 @@ from bpe.pretokenizer import (
     utf8_codepoint_byte_length,
 )
 from tenmo.shared.indexhelper import i as Indexer, s as Slicer
+from tenmo.net import Linear
 from tenmo.embedding import Embedding
 from tenmo.crossentropy import CrossEntropyLoss
 from std.random import random_ui64, seed
 from tenmo.adamw import AdamW
+from tenmo.dropout import Dropout
 
 comptime download_url = "https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt"
 comptime input_file = "/tmp/input.txt"
@@ -22,11 +27,12 @@ comptime input_file = "/tmp/input.txt"
 comptime block_size = 8
 comptime batch_size = 32
 comptime eval_iters = 200
-comptime max_iters = 3000
+comptime max_iters = 10000
 comptime eval_interval = 300
 comptime gen_interval = 500
-comptime learning_rate = 1e-2
-comptime n_embed = 32
+comptime learning_rate = 1e-3
+comptime n_embd = 32
+comptime drop_ratio = 0.2
 
 comptime INT = DType.int
 comptime INT64 = DType.int64
@@ -34,7 +40,6 @@ comptime F32 = DType.float32
 
 
 struct TinyShakespeare:
-
     @staticmethod
     def text() raises -> String:
         var path = Path(input_file)
@@ -97,12 +102,99 @@ struct CharPretokenizer(PreTokenizer):
         writer.write(String("CharPretokenizer"))
 
 
+struct Head:
+    """One head of self-attention."""
+
+    var key: Linear[F32]
+    var query: Linear[F32]
+    var value: Linear[F32]
+    var tril: Tensor[F32]
+    var dropout: Dropout[F32]
+    var inv_scale: Scalar[F32]
+
+    def __init__(out self, head_size: Int = 16):
+        self.key = Linear[F32](
+            in_features=n_embd,
+            out_features=head_size,
+            init_method="normal",
+            bias=False,
+        )
+        self.query = Linear[F32](
+            in_features=n_embd,
+            out_features=head_size,
+            init_method="normal",
+            bias=False,
+        )
+        self.value = Linear[F32](
+            in_features=n_embd,
+            out_features=head_size,
+            init_method="normal",
+            bias=False,
+        )
+        self.tril = Tensor[F32].ones(block_size, block_size).tril()
+        self.dropout = Dropout[F32](drop_ratio)
+        self.inv_scale = Scalar[F32](1.0 / sqrt(Float64(head_size)))
+
+    def __call__(mut self, x: Tensor[F32]) raises -> Tensor[F32]:
+        # input of size (batch, time-step, channels)
+        # output of size (batch, time-step, head size)
+        ref x_shape = x.shape()
+        # var B,T,C = x_shape[0], x_shape[1], x_shape[2]
+        var T = x_shape[1]
+        var k = self.key(x)  # (B,T,hs)
+        var q = self.query(x)  # (B,T,hs)
+        # compute attention scores ("affinities")
+        var wei = (
+            q.matmul(k.transpose(-1, -2)) * self.inv_scale
+        )  # (B, T, hs) @ (B, hs, T) -> (B, T, T)
+        wei = wei.masked_fill(
+            self.tril[:T, :T] == 0, neg_inf[F32]()
+        )  # (B, T, T)
+        wei = wei.softmax(axes=[-1])  # (B, T, T)
+        wei = self.dropout(wei)
+        # perform the weighted aggregation of the values
+        var v = self.value(x)  # (B,T,hs)
+        var out = wei.matmul(v)  # (B, T, T) @ (B, T, hs) -> (B, T, hs)
+        return out^
+
+    def parameters(ref self) -> List[Pointer[Tensor[F32], MutAnyOrigin]]:
+        var params = List[Pointer[Tensor[F32], MutAnyOrigin]]()
+        params.extend(self.key.parameters())
+        params.extend(self.query.parameters())
+        params.extend(self.value.parameters())
+        return params^
+
+    def train(mut self):
+        self.key.training = True
+        self.query.training = True
+        self.value.training = True
+        self.dropout.training = True
+
+    def eval(mut self):
+        self.key.training = False
+        self.query.training = False
+        self.value.training = False
+        self.dropout.training = False
+
+
 struct BigramModel:
-    var embedding_table: Embedding[F32]
+    var token_embdding_table: Embedding[F32]
+    var position_embdding_table: Embedding[F32]
+    var sa_head: Head
+    var lm_head: Linear[F32]
     var criterion: CrossEntropyLoss[F32]
 
     def __init__(out self, vocab_size: Int):
-        self.embedding_table = Embedding[F32](vocab_size, vocab_size)
+        self.token_embdding_table = Embedding[F32](
+            vocab_size, n_embd, init_method="normal"
+        )
+        self.position_embdding_table = Embedding[F32](
+            block_size, n_embd, init_method="normal"
+        )
+        self.sa_head = Head(n_embd)
+        self.lm_head = Linear[F32](
+            in_features=n_embd, out_features=vocab_size, init_method="normal"
+        )
         self.criterion = CrossEntropyLoss[F32]()
 
     def __call__(
@@ -110,7 +202,19 @@ struct BigramModel:
         indices: Tensor[INT],
         targets: Optional[Tensor[INT]] = None,
     ) raises -> Tuple[Tensor[F32], Optional[Tensor[F32]]]:
-        var logits = self.embedding_table(indices.to_dtype[INT64]())
+        ref indices_shape = indices.shape()
+        var token_count = indices_shape[1]
+        var token_embddings = self.token_embdding_table(
+            indices.to_dtype[INT64]()
+        )  # B, T, n_embd
+        var positional_embeddings = self.position_embdding_table(
+            Tensor[INT64].arange(Int64(token_count))
+        )  # T, n_embd
+        var combined_embeddings = (
+            token_embddings + positional_embeddings
+        )  # B, T, n_embd
+        var attended_embeddings = self.sa_head(combined_embeddings)
+        var logits = self.lm_head(attended_embeddings)  # B, T, vocab_size
         var loss: Optional[Tensor[F32]] = None
         if targets:
             # CrossEntropyLoss logits and target conformation
@@ -123,13 +227,24 @@ struct BigramModel:
         return logits^, loss^
 
     def parameters(ref self) -> List[Pointer[Tensor[F32], MutAnyOrigin]]:
-        return self.embedding_table.parameters()
+        var params = List[Pointer[Tensor[F32], MutAnyOrigin]]()
+        params.extend(self.token_embdding_table.parameters())
+        params.extend(self.position_embdding_table.parameters())
+        params.extend(self.sa_head.parameters())
+        params.extend(self.lm_head.parameters())
+        return params^
 
     def train(mut self):
-        self.embedding_table.training = True
+        self.token_embdding_table.training = True
+        self.position_embdding_table.training = True
+        self.sa_head.train()
+        self.lm_head.training = True
 
     def eval(mut self):
-        self.embedding_table.training = False
+        self.token_embdding_table.training = False
+        self.position_embdding_table.training = False
+        self.sa_head.eval()
+        self.lm_head.training = False
 
     def generate(
         mut self,
@@ -140,7 +255,18 @@ struct BigramModel:
         # indices (B, T) from current context
         var appended = indices.clone()
         for _ in range(max_new_tokens):
-            var (logits, _) = self(appended)
+            # Position embeddings only have `block_size` rows, so the model
+            # cannot accept a context longer than block_size. Crop the growing
+            # generated sequence to its last block_size tokens (like
+            # idx[:, -block_size:] in nanoGPT) before each forward pass.
+            var T = appended.shape()[1]
+            var idx_cond: Tensor[INT]
+            if T <= block_size:
+                idx_cond = appended.clone()
+            else:
+                var start = T - block_size
+                idx_cond = appended[Slicer(), Slicer(start, None, None)]
+            var (logits, _) = self(idx_cond)
             # logits now (B, C)
             logits = logits[Slicer(), -1, Slicer()]
             var probas = logits.softmax[track_grad=False](axes=[-1])
@@ -152,7 +278,7 @@ struct BigramModel:
             appended = Tensor[INT].concat[track_grad=False](
                 [appended, next_id], axis=1
             )
-        return appended^
+        return appended^  # (B, T+1)
 
 
 struct Dataset:
@@ -170,9 +296,7 @@ struct Dataset:
     def val_ds(ref self) -> ref[self.val_data] Tensor[INT]:
         return self.val_data
 
-    def get_batch(
-        self, mode: String
-    ) raises -> Tuple[Tensor[INT], Tensor[INT]]:
+    def get_batch(self, mode: String) raises -> Tuple[Tensor[INT], Tensor[INT]]:
         ref data_src = self.train_data if mode == "train" else self.val_data
         var indices = Tensor[INT].rand(
             batch_size, high=len(data_src) - block_size
@@ -207,7 +331,7 @@ struct Loss:
 
 
 def main() raises:
-    _="""var text = TinyShakespeare.text()
+    var text = TinyShakespeare.text()
     var tokenizer = BPETokenizer[CharPretokenizer]()
     var corpus = Span[String]([text])
     tokenizer.train(corpus, 300)
@@ -244,6 +368,7 @@ def main() raises:
         loss_inner.backward()
         optimizer.step()
 
+    model.eval()
     print(
         tokenizer.decode(
             model.generate(
@@ -253,31 +378,4 @@ def main() raises:
             )[Indexer(0), Slicer()].tolist()
         ),
         end="\n",
-    )"""
-    seed(42)
-    var B, T, C = 2, 4, 2
-    #var x = Tensor[F32].rand(B, T, C, init_seed=42)
-    var x = Tensor[F32].arange(0.0, Float32(B*T*C))
-    x.print(header=False)
-    x = x.reshape(B, T, C)
-    print()
-    x.print(header=False)
-    var bag_of_words = Tensor[F32].zeros(B, T, C)
-    var weights = Tensor[F32].ones(T, T).tril()
-    weights = weights / weights.sum(axes=[1], keepdims=True)
-
-    print("v weights")
-    weights.print()
-    print("^weights")
-    var bag_of_words2 = weights.matmul(x)
-    for b in range(B):
-        for t in range(T):
-            var prev_token = x[Indexer(b), Slicer(0,t+1), Slicer()]
-            print(prev_token)
-            var m = prev_token.mean(axes=[0])
-            print("mean")
-            m.print()
-            bag_of_words.fill(m, Indexer(b), Indexer(t), Slicer())
-
-    bag_of_words.print()
-    assert_true(bag_of_words.all_close(bag_of_words2))
+    )
