@@ -5,7 +5,6 @@ from std.utils.numerics import neg_inf
 from std.math import sqrt
 from std.testing import assert_true
 
-
 from tenmo.tensor import Tensor
 from bpe import BPETokenizer
 from bpe.pretokenizer import (
@@ -32,11 +31,11 @@ comptime eval_iters = 200
 comptime max_iters = 5000
 comptime max_new_tokens = 500
 comptime eval_interval = 300
-#comptime gen_interval = 500
-comptime learning_rate = 3e-4
-comptime n_embd = 128
-comptime n_head = 4
-comptime n_layer = 4
+# comptime gen_interval = 500
+comptime learning_rate = 1e-3
+comptime n_embd = 320
+comptime n_head = 5
+comptime n_layer = 5
 comptime drop_ratio = 0.1
 
 comptime INT = DType.int
@@ -104,24 +103,6 @@ struct Dataset:
 
 
 struct Loss:
-    @staticmethod
-    def estimate(
-        mut model: BigramModel,
-        ref dataset: Dataset,
-    ) raises -> Dict[String, Float32]:
-        model.eval()
-        var out = {"train": Float32(0.0), "val": Float32(0.0)}
-        for mode in ["train", "val"]:
-            var losses = Tensor[F32].zeros(eval_iters)
-            for k in range(eval_iters):
-                var (x, y) = dataset.get_batch(mode)
-                var (_, loss) = model(x, y)
-                # loss.value() because loss is Optional
-                losses[k] = loss.value().item()
-            out[mode] = losses.mean().item()
-        model.train()
-        return out^
-
     @staticmethod
     def estimate(
         mut model: CharGPT,
@@ -331,81 +312,6 @@ struct Block(ImplicitlyCopyable):
         self.mlp.eval()
 
 
-struct Head:
-    """One head of self-attention."""
-
-    var key: Linear[F32]
-    var query: Linear[F32]
-    var value: Linear[F32]
-    var tril: Tensor[F32]
-    var dropout: Dropout[F32]
-    var inv_scale: Scalar[F32]
-
-    def __init__(out self, head_size: Int = 16):
-        self.key = Linear[F32](
-            in_features=n_embd,
-            out_features=head_size,
-            init_method="normal",
-            bias=False,
-        )
-        self.query = Linear[F32](
-            in_features=n_embd,
-            out_features=head_size,
-            init_method="normal",
-            bias=False,
-        )
-        self.value = Linear[F32](
-            in_features=n_embd,
-            out_features=head_size,
-            init_method="normal",
-            bias=False,
-        )
-        self.tril = Tensor[F32].ones(block_size, block_size).tril()
-        self.dropout = Dropout[F32](drop_ratio)
-        self.inv_scale = Scalar[F32](1.0 / sqrt(Float64(head_size)))
-
-    def __call__(mut self, x: Tensor[F32]) raises -> Tensor[F32]:
-        # input of size (batch, time-step, channels)
-        # output of size (batch, time-step, head size)
-        ref x_shape = x.shape()
-        # var B,T,C = x_shape[0], x_shape[1], x_shape[2]
-        var T = x_shape[1]
-        var k = self.key(x)  # (B,T,hs)
-        var q = self.query(x)  # (B,T,hs)
-        # compute attention scores ("affinities")
-        var wei = (
-            q.matmul(k.transpose(-1, -2)) * self.inv_scale
-        )  # (B, T, hs) @ (B, hs, T) -> (B, T, T)
-        wei = wei.masked_fill(
-            self.tril[:T, :T] == 0, neg_inf[F32]()
-        )  # (B, T, T)
-        wei = wei.softmax(axes=[-1])  # (B, T, T)
-        wei = self.dropout(wei)
-        # perform the weighted aggregation of the values
-        var v = self.value(x)  # (B,T,hs)
-        var out = wei.matmul(v)  # (B, T, T) @ (B, T, hs) -> (B, T, hs)
-        return out^
-
-    def parameters(ref self) -> List[Pointer[Tensor[F32], MutAnyOrigin]]:
-        var params = List[Pointer[Tensor[F32], MutAnyOrigin]]()
-        params.extend(self.key.parameters())
-        params.extend(self.query.parameters())
-        params.extend(self.value.parameters())
-        return params^
-
-    def train(mut self):
-        self.key.training = True
-        self.query.training = True
-        self.value.training = True
-        self.dropout.training = True
-
-    def eval(mut self):
-        self.key.training = False
-        self.query.training = False
-        self.value.training = False
-        self.dropout.training = False
-
-
 struct CharGPT(ImplicitlyCopyable):
     var token_embedding_table: Embedding[F32]
     var position_embedding_table: Embedding[F32]
@@ -542,110 +448,6 @@ struct CharGPT(ImplicitlyCopyable):
         return appended^  # (B, T+1)
 
 
-struct BigramModel:
-    var token_embdding_table: Embedding[F32]
-    var position_embdding_table: Embedding[F32]
-    var sa_head: Head
-    var lm_head: Linear[F32]
-    var criterion: CrossEntropyLoss[F32]
-
-    def __init__(out self, vocab_size: Int):
-        self.token_embdding_table = Embedding[F32](
-            vocab_size, n_embd, init_method="normal"
-        )
-        self.position_embdding_table = Embedding[F32](
-            block_size, n_embd, init_method="normal"
-        )
-        self.sa_head = Head(n_embd)
-        self.lm_head = Linear[F32](
-            in_features=n_embd, out_features=vocab_size, init_method="normal"
-        )
-        self.criterion = CrossEntropyLoss[F32]()
-
-    def __call__(
-        mut self,
-        indices: Tensor[INT],
-        targets: Optional[Tensor[INT]] = None,
-    ) raises -> Tuple[Tensor[F32], Optional[Tensor[F32]]]:
-        ref indices_shape = indices.shape()
-        var token_count = indices_shape[1]
-        var token_embddings = self.token_embdding_table(
-            indices.to_dtype[INT64]()
-        )  # B, T, n_embd
-        var positional_embeddings = self.position_embdding_table(
-            Tensor[INT64].arange(Int64(token_count))
-        )  # T, n_embd
-        var combined_embeddings = (
-            token_embddings + positional_embeddings
-        )  # B, T, n_embd
-        var attended_embeddings = self.sa_head(combined_embeddings)
-        var logits = self.lm_head(attended_embeddings)  # B, T, vocab_size
-        var loss: Optional[Tensor[F32]] = None
-        if targets:
-            # CrossEntropyLoss logits and target conformation
-            ref logits_shape = logits.shape()
-            var B, T, C = logits_shape[0], logits_shape[1], logits_shape[2]
-            loss = self.criterion(
-                logits.reshape(B * T, C),
-                targets.value().to_dtype[INT64]().reshape(B * T),
-            )
-        return logits^, loss^
-
-    def parameters(ref self) -> List[Pointer[Tensor[F32], MutAnyOrigin]]:
-        var params = List[Pointer[Tensor[F32], MutAnyOrigin]]()
-        params.extend(self.token_embdding_table.parameters())
-        params.extend(self.position_embdding_table.parameters())
-        params.extend(self.sa_head.parameters())
-        params.extend(self.lm_head.parameters())
-        return params^
-
-    def train(mut self):
-        self.token_embdding_table.training = True
-        self.position_embdding_table.training = True
-        self.sa_head.train()
-        self.lm_head.training = True
-
-    def eval(mut self):
-        self.token_embdding_table.training = False
-        self.position_embdding_table.training = False
-        self.sa_head.eval()
-        self.lm_head.training = False
-
-    def generate(
-        mut self,
-        indices: Tensor[INT],
-        max_new_tokens: Int,
-        max_seed: UInt64 = 100,
-    ) raises -> Tensor[INT]:
-        # indices (B, T) from current context
-        var appended = indices.clone()
-        for _ in range(max_new_tokens):
-            # Position embeddings only have `block_size` rows, so the model
-            # cannot accept a context longer than block_size. Crop the growing
-            # generated sequence to its last block_size tokens (like
-            # idx[:, -block_size:] in nanoGPT) before each forward pass.
-            var T = appended.shape()[1]
-            var idx_cond: Tensor[INT]
-            if T <= block_size:
-                idx_cond = appended.clone()
-            else:
-                var start = T - block_size
-                idx_cond = appended[Slicer(), Slicer(start, None, None)]
-            var (logits, _) = self(idx_cond)
-            # logits now (B, C)
-            logits = logits[Slicer(), -1, Slicer()]
-            var probas = logits.softmax[track_grad=False](axes=[-1])
-            # next_id's shape (B, 1)
-            seed()
-            var next_id = probas.multinomial[index_dtype=INT](
-                init_seed=Int(random_ui64(0, max_seed))
-            )
-            appended = Tensor[INT].concat[track_grad=False](
-                [appended, next_id], axis=1
-            )
-        return appended^  # (B, T+1)
-
-
 def main() raises:
     var text = TinyShakespeare.text()
     var tokenizer = BPETokenizer[CharPretokenizer]()
@@ -656,7 +458,6 @@ def main() raises:
     print("Tokenizer len: ", len(tokenizer))
     var data = Tensor[INT].d1(tokenizer.encode(text^))
     var dataset = Dataset(data^)
-    # var model = BigramModel(vocab_size)
     var model = CharGPT(vocab_size)
     var optimizer = AdamW[F32](
         model.parameters(),
