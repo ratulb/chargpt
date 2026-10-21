@@ -189,16 +189,16 @@ struct Loss:
 
 def main() raises:
     var text = TinyShakespeare.text()
-    var tok = CharTokenizer(text)
+    var tokenizer = CharTokenizer(text)
 
-    var vocab_size = len(tok)
-    print("Tokenizer len: ", len(tok))
-    var data = Tensor[INT].d1(tok.encode(text^))
+    var vocab_size = len(tokenizer)
+    print("Tokenizer len: ", len(tokenizer))
+    var data = Tensor[INT].d1(tokenizer.encode(text^))
     var dataset = Dataset(data^)
     var model = BigramModel(vocab_size)
 
     print(
-        tok.decode(
+        tokenizer.decode(
             model.generate(
                 Tensor[INT].zeros(1, 1),
                 max_new_tokens=100,
@@ -234,7 +234,7 @@ def main() raises:
 
         if (iter + 1) % gen_interval == 0:
             print(
-                tok.decode(
+                tokenizer.decode(
                     model.generate(
                         Tensor[INT].zeros(1, 1),
                         max_new_tokens=500,

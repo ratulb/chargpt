@@ -1,3 +1,8 @@
+from std.pathlib import Path
+from std.os.process import Process
+from std.collections import Set
+from std.testing import assert_true
+
 from tenmo.tensor import Tensor
 from bpe import BPETokenizer
 from bpe.pretokenizer import (
@@ -5,9 +10,6 @@ from bpe.pretokenizer import (
     ByteMapping,
     utf8_codepoint_byte_length,
 )
-from std.pathlib import Path
-from std.os.process import Process
-from std.collections import Set
 from tenmo.shared.indexhelper import i as Indexer, s as Slicer
 from tenmo.embedding import Embedding
 from tenmo.crossentropy import CrossEntropyLoss
@@ -24,6 +26,7 @@ comptime max_iters = 3000
 comptime eval_interval = 300
 comptime gen_interval = 500
 comptime learning_rate = 1e-2
+comptime n_embed = 32
 
 comptime INT = DType.int
 comptime INT64 = DType.int64
@@ -204,14 +207,14 @@ struct Loss:
 
 
 def main() raises:
-    var text = TinyShakespeare.text()
-    var tok = BPETokenizer[CharPretokenizer]()
+    _="""var text = TinyShakespeare.text()
+    var tokenizer = BPETokenizer[CharPretokenizer]()
     var corpus = Span[String]([text])
-    tok.train(corpus, 300)
+    tokenizer.train(corpus, 300)
 
-    var vocab_size = len(tok)
-    print("Tokenizer len: ", len(tok))
-    var data = Tensor[INT].d1(tok.encode(text^))
+    var vocab_size = len(tokenizer)
+    print("Tokenizer len: ", len(tokenizer))
+    var data = Tensor[INT].d1(tokenizer.encode(text^))
     var dataset = Dataset(data^)
     var model = BigramModel(vocab_size)
     var optimizer = AdamW[F32](
@@ -241,15 +244,40 @@ def main() raises:
         loss_inner.backward()
         optimizer.step()
 
-        if (iter + 1) % gen_interval == 0:
-            print(
-                tok.decode(
-                    model.generate(
-                        Tensor[INT].zeros(1, 1),
-                        max_new_tokens=500,
-                        max_seed=UInt64(100),
-                    )[Indexer(0), Slicer()].tolist()
-                ),
-                end="\n",
-            )
+    print(
+        tokenizer.decode(
+            model.generate(
+                Tensor[INT].zeros(1, 1),
+                max_new_tokens=500,
+                max_seed=UInt64(100),
+            )[Indexer(0), Slicer()].tolist()
+        ),
+        end="\n",
+    )"""
+    seed(42)
+    var B, T, C = 2, 4, 2
+    #var x = Tensor[F32].rand(B, T, C, init_seed=42)
+    var x = Tensor[F32].arange(0.0, Float32(B*T*C))
+    x.print(header=False)
+    x = x.reshape(B, T, C)
+    print()
+    x.print(header=False)
+    var bag_of_words = Tensor[F32].zeros(B, T, C)
+    var weights = Tensor[F32].ones(T, T).tril()
+    weights = weights / weights.sum(axes=[1], keepdims=True)
 
+    print("v weights")
+    weights.print()
+    print("^weights")
+    var bag_of_words2 = weights.matmul(x)
+    for b in range(B):
+        for t in range(T):
+            var prev_token = x[Indexer(b), Slicer(0,t+1), Slicer()]
+            print(prev_token)
+            var m = prev_token.mean(axes=[0])
+            print("mean")
+            m.print()
+            bag_of_words.fill(m, Indexer(b), Indexer(t), Slicer())
+
+    bag_of_words.print()
+    assert_true(bag_of_words.all_close(bag_of_words2))
