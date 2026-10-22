@@ -23,11 +23,11 @@ from tenmo.layernorm import LayerNorm
 comptime download_url = "https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt"
 comptime input_file = "/tmp/input.txt"
 
-comptime block_size = 48
+comptime block_size = 64
 # comptime block_size = 8
 comptime batch_size = 32
 comptime eval_iters = 50  # 200
-comptime max_iters = 8000
+comptime max_iters = 10000
 # comptime max_iters = 5
 comptime max_new_tokens = 500
 comptime eval_interval = 300
@@ -40,7 +40,8 @@ comptime n_layer = 5
 # comptime n_head = 2
 # comptime n_layer = 2
 
-comptime drop_ratio = 0.1
+#comptime drop_ratio = 0.1
+comptime drop_ratio = 0.0
 
 comptime INT = DType.int
 comptime INT64 = DType.int64
