@@ -1,9 +1,7 @@
 from std.pathlib import Path
 from std.os.process import Process
-from std.collections import Set
 from std.utils.numerics import neg_inf
 from std.math import sqrt
-from std.testing import assert_true
 
 from tenmo.tensor import Tensor
 from bpe import BPETokenizer
@@ -25,10 +23,12 @@ from tenmo.layernorm import LayerNorm
 comptime download_url = "https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt"
 comptime input_file = "/tmp/input.txt"
 
-comptime block_size = 8
+comptime block_size = 48
+# comptime block_size = 8
 comptime batch_size = 32
-comptime eval_iters = 200
-comptime max_iters = 5000
+comptime eval_iters = 50  # 200
+comptime max_iters = 8000
+# comptime max_iters = 5
 comptime max_new_tokens = 500
 comptime eval_interval = 300
 # comptime gen_interval = 500
@@ -36,6 +36,10 @@ comptime learning_rate = 1e-3
 comptime n_embd = 320
 comptime n_head = 5
 comptime n_layer = 5
+# comptime n_embd = 32
+# comptime n_head = 2
+# comptime n_layer = 2
+
 comptime drop_ratio = 0.1
 
 comptime INT = DType.int
@@ -48,29 +52,21 @@ struct TinyShakespeare:
     def text() raises -> String:
         var path = Path(input_file)
         if not path.exists() or not path.is_file():
-            Self.download()
+            print("Downloading tiny shakespeare (~1MB)...")
+            var args = List[String]()
+            args.append("-P")
+            args.append("/tmp")
+            args.append(download_url)
+            var process = Process.run("wget", args^)
+            _ = process.wait()
+            print("Tiny shakespeare downloaded")
+
         var content = path.read_text()
         print("Total characters: ", content.byte_length())
         print("Total code points: ", content.count_codepoints())
         print("Total graphemes: ", content.count_graphemes())
         print()
-
         return content^
-
-    @staticmethod
-    def download() raises:
-        var path = Path(input_file)
-        if path.exists() and path.is_file():
-            return
-        print("downloading aclImdb (~1MB)...")
-        var args = List[String]()
-        args.append("-P")
-        args.append("/tmp")
-        args.append(download_url)
-
-        var process = Process.run("wget", args^)
-        _ = process.wait()
-        print("Tiny shakespeare downloaded")
 
 
 struct Dataset:
@@ -82,22 +78,29 @@ struct Dataset:
         self.train_data = data[:split]
         self.val_data = data[split:]
 
-    def train_ds(ref self) -> ref[self.train_data] Tensor[INT]:
-        return self.train_data
-
-    def val_ds(ref self) -> ref[self.val_data] Tensor[INT]:
-        return self.val_data
-
-    def get_batch(self, mode: String) raises -> Tuple[Tensor[INT], Tensor[INT]]:
+    def random_batch(
+        self,
+        mode: String,
+        batch_size_override: Optional[
+            Int
+        ] = None,  # Override batch size if need be. For example: Get initial prompt
+        block_size_override: Optional[
+            Int
+        ] = None,  # Override block size if needed. For example: For getting initail prompt
+    ) raises -> Tuple[Tensor[INT], Tensor[INT]]:
         ref data_src = self.train_data if mode == "train" else self.val_data
+        var size_of_batch = batch_size_override.or_else(batch_size)
+        var size_of_block = block_size_override.or_else(block_size)
         var indices = Tensor[INT].rand(
-            batch_size, high=len(data_src) - block_size
+            size_of_batch, high=len(data_src) - size_of_block
         )
+        # In tenmo, iterating over a Tensor produces coord(s) and value(s).
+        # We are interested in the values.
         var x = Tensor[INT].stack(
-            [data_src[i[1] : i[1] + block_size] for i in indices]
+            [data_src[idx : idx + size_of_block] for _, idx in indices]
         )
         var y = Tensor[INT].stack(
-            [data_src[i[1] + 1 : i[1] + block_size + 1] for i in indices]
+            [data_src[idx + 1 : idx + size_of_block + 1] for _, idx in indices]
         )
         return x^, y^
 
@@ -113,7 +116,7 @@ struct Loss:
         for mode in ["train", "val"]:
             var losses = Tensor[F32].zeros(eval_iters)
             for k in range(eval_iters):
-                var (x, y) = dataset.get_batch(mode)
+                var (x, y) = dataset.random_batch(mode)
                 var (_, loss) = model(x, y)
                 # loss.value() because loss is Optional
                 losses[k] = loss.value().item()
@@ -123,6 +126,10 @@ struct Loss:
 
 
 struct CharPretokenizer(PreTokenizer):
+    """Implment `PreTokenizer` trait from mbpe - to be used in conjunction with BPETokenizer.
+    Text would be token per unicode character codepoint.
+    """
+
     comptime byte_map: ByteMapping = ByteMapping.SEQUENTIAL
 
     def __init__(out self):
@@ -155,7 +162,7 @@ struct CharPretokenizer(PreTokenizer):
         writer.write(String("CharPretokenizer"))
 
 
-struct MultiHeadAttention(ImplicitlyCopyable):
+struct MultiHeadAttention:
     """Implement multi-head causal attention."""
 
     var n_head: Int
@@ -230,7 +237,7 @@ struct MultiHeadAttention(ImplicitlyCopyable):
         self.dropout.training = False
 
 
-struct MLP(ImplicitlyCopyable):
+struct MLP:
     var c_fc: Linear[F32]
     var gelu: GeLU[F32]
     var c_proj: Linear[F32]
@@ -271,7 +278,7 @@ struct MLP(ImplicitlyCopyable):
         self.dropout.training = False
 
 
-struct Block(ImplicitlyCopyable):
+struct Block:
     var ln1: LayerNorm[F32]
     var attn: MultiHeadAttention
     var ln2: LayerNorm[F32]
@@ -312,7 +319,9 @@ struct Block(ImplicitlyCopyable):
         self.mlp.eval()
 
 
-struct CharGPT(ImplicitlyCopyable):
+struct CharGPT:
+    """The character based generative model."""
+
     var token_embedding_table: Embedding[F32]
     var position_embedding_table: Embedding[F32]
     var blocks: List[Block]
@@ -335,14 +344,6 @@ struct CharGPT(ImplicitlyCopyable):
             in_features=n_embd, out_features=vocab_size, init_method="normal"
         )
         self.criterion = CrossEntropyLoss[F32]()
-
-    def __init__(out self, *, copy: Self):
-        self.token_embedding_table = copy.token_embedding_table
-        self.position_embedding_table = copy.position_embedding_table
-        self.blocks = copy.blocks.copy()
-        self.ln_f = copy.ln_f
-        self.lm_head = copy.lm_head
-        self.criterion = copy.criterion
 
     def __call__(
         mut self, indices: Tensor[INT], targets: Optional[Tensor[INT]] = None
@@ -417,10 +418,12 @@ struct CharGPT(ImplicitlyCopyable):
         mut self,
         indices: Tensor[INT],
         max_new_tokens: Int,
-        max_seed: UInt64 = 100,
+        seed_range: UInt64 = 100,  # multinomial sets seed at `42` if not provided!
     ) raises -> Tensor[INT]:
+        self.eval()
         # indices (B, T) from current context
         var appended = indices.clone()
+        seed()
         for _ in range(max_new_tokens):
             # Position embeddings only have `block_size` rows, so the model
             # cannot accept a context longer than block_size. Crop the growing
@@ -438,9 +441,8 @@ struct CharGPT(ImplicitlyCopyable):
             logits = logits[Slicer(), -1, Slicer()]
             var probas = logits.softmax[track_grad=False](axes=[-1])
             # next_id's shape (B, 1)
-            seed()
             var next_id = probas.multinomial[index_dtype=INT](
-                init_seed=Int(random_ui64(0, max_seed))
+                init_seed=Int(random_ui64(0, seed_range))
             )
             appended = Tensor[INT].concat[track_grad=False](
                 [appended, next_id], axis=1
@@ -448,37 +450,62 @@ struct CharGPT(ImplicitlyCopyable):
         return appended^  # (B, T+1)
 
 
+def generate_text(
+    tokenizer: BPETokenizer[_], mut model: CharGPT, dataset: Dataset
+) raises:
+    # Get a random single batch from validation data with 5 char
+    var rand_batch = dataset.random_batch("val", 1, 5)
+    var rand_context = rand_batch[0]
+    var generated = model.generate(
+        rand_context, max_new_tokens=max_new_tokens, seed_range=UInt64(100)
+    )
+    var tokens = generated[Indexer(0), Slicer()].tolist()
+    var text = tokenizer.decode(tokens)
+    print(text)
+
+
 def main() raises:
     var text = TinyShakespeare.text()
+    # We are training a character model - not a subword model
+    # With mbpe's BPETokenizer we should be able to handle any unicode character thrown at it - not necessarily ascii
     var tokenizer = BPETokenizer[CharPretokenizer]()
     var corpus = Span[String]([text])
+    # The corpus has 65 unique ascii - as can be found in accompanying bigram model
+    # Requesting 300 token(char) would still produce 256 vocab - BPE base starting vocab(255 bytes)
     tokenizer.train(corpus, 300)
 
     var vocab_size = len(tokenizer)
+    # Would print 256
     print("Tokenizer len: ", len(tokenizer))
+    # Create tensor from text data
     var data = Tensor[INT].d1(tokenizer.encode(text^))
+    # Create the dataset to train and test from
     var dataset = Dataset(data^)
+    # The character based generative model
     var model = CharGPT(vocab_size)
+
     var optimizer = AdamW[F32](
         model.parameters(),
         lr=Scalar[F32](learning_rate),
-        clip_norm=Scalar[F32](1),
-        clip_value=Scalar[F32](0.5),
+        # clip_norm=Scalar[F32](1),
+        # clip_value=Scalar[F32](0.5),
     )
+    model.train()
 
-    for iter in range(max_iters):
+    for step in range(max_iters):
         # every once in a while evaluate the loss on train and val sets
-        if (iter + 1) % eval_interval == 0:
+        if (step + 1) % eval_interval == 0:
             var losses = Loss.estimate(model, dataset)
             print(
                 "Step {0}: train loss {1}, val loss {2}".format(
-                    iter + 1, losses["train"], losses["val"]
+                    step + 1, losses["train"], losses["val"]
                 )
             )
+            print()
+            generate_text(tokenizer, model, dataset)
 
-        var (xb, yb) = dataset.get_batch("train")
+        var (xb, yb) = dataset.random_batch("train")
         var output = model(xb, yb)
-        ref _logits = output[0]
         ref loss = output[1]
         # loss is returned as Optional - hence `value()`
         ref loss_inner = loss.value()
@@ -487,13 +514,4 @@ def main() raises:
         optimizer.step()
 
     model.eval()
-    print(
-        tokenizer.decode(
-            model.generate(
-                Tensor[INT].zeros(1, 1),
-                max_new_tokens=max_new_tokens,
-                max_seed=UInt64(100),
-            )[Indexer(0), Slicer()].tolist()
-        ),
-        end="\n",
-    )
+    generate_text(tokenizer, model, dataset)

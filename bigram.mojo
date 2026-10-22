@@ -44,7 +44,7 @@ struct TinyShakespeare:
         var path = Path(input_file)
         if path.exists() and path.is_file():
             return
-        print("downloading aclImdb (~1MB)...")
+        print("downloading tiny shakespeare (~1MB)...")
         var args = List[String]()
         args.append("-P")
         args.append("/tmp")
@@ -159,10 +159,10 @@ struct Dataset:
             batch_size, high=len(data_src) - block_size
         )
         var x = Tensor[INT].stack(
-            [data_src[i[1] : i[1] + block_size] for i in indices]
+            [data_src[idx : idx + block_size] for _, idx in indices]
         )
         var y = Tensor[INT].stack(
-            [data_src[i[1] + 1 : i[1] + block_size + 1] for i in indices]
+            [data_src[idx + 1 : idx + block_size + 1] for i in indices]
         )
         return x^, y^
 
