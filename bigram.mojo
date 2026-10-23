@@ -2,58 +2,20 @@ from tenmo.tensor import Tensor
 from std.pathlib import Path
 from std.os.process import Process
 from std.collections import Set
+from std.sys import argv
 from tenmo.shared.indexhelper import i as Indexer, s as Slicer
 from tenmo.embedding import Embedding
 from tenmo.crossentropy import CrossEntropyLoss
 from std.random import random_ui64, seed
 from tenmo.adamw import AdamW
 
-comptime download_url = "https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt"
-comptime input_file = "/tmp/input.txt"
-
-comptime block_size = 128
-comptime batch_size = 32
-comptime eval_iters = 200
-comptime max_iters = 20000
-comptime eval_interval = 300
-comptime gen_interval = 500
-comptime learning_rate = 1e-3
-comptime max_seed = 1000000
+from shared import CmdLineArgs, TinyShakespeare, learning_rate
 
 comptime INT = DType.int
 comptime INT64 = DType.int64
 comptime F32 = DType.float32
 
-
-struct TinyShakespeare:
-
-    @staticmethod
-    def text() raises -> String:
-        var path = Path(input_file)
-        if not path.exists() or not path.is_file():
-            Self.download()
-        var content = path.read_text()
-        print("Total characters: ", content.byte_length())
-        print("Total code points: ", content.count_codepoints())
-        print("Total graphemes: ", content.count_graphemes())
-        print()
-
-        return content^
-
-    @staticmethod
-    def download() raises:
-        var path = Path(input_file)
-        if path.exists() and path.is_file():
-            return
-        print("downloading tiny shakespeare (~1MB)...")
-        var args = List[String]()
-        args.append("-P")
-        args.append("/tmp")
-        args.append(download_url)
-
-        var process = Process.run("wget", args^)
-        _ = process.wait()
-        print("Tiny shakespeare downloaded")
+comptime HParams = CmdLineArgs
 
 
 struct CharTokenizer(Sized):
@@ -78,6 +40,7 @@ struct CharTokenizer(Sized):
 
     def __len__(self) -> Int:
         return len(self.itos)
+
 
 struct BigramModel:
     var embedding_table: Embedding[F32]
@@ -117,7 +80,7 @@ struct BigramModel:
         mut self,
         indices: Tensor[INT],
         max_new_tokens: Int,
-        max_seed: UInt64 = max_seed,
+        max_seed: UInt64,
     ) raises -> Tensor[INT]:
         # indices (B, T) from current context
         var appended = indices.clone()
@@ -140,11 +103,20 @@ struct BigramModel:
 struct Dataset:
     var train_data: Tensor[INT]
     var val_data: Tensor[INT]
+    var batch_size: Int
+    var seq_length: Int
 
-    def __init__(out self, var data: Tensor[INT], split_ratio: Float64 = 0.9):
+    def __init__(
+        out self,
+        var data: Tensor[INT],
+        h_params: HParams,
+        split_ratio: Float64 = 0.9,
+    ):
         var split = Int(split_ratio * Float64(len(data)))
         self.train_data = data[:split]
         self.val_data = data[split:]
+        self.batch_size = h_params.batch_size
+        self.seq_length = h_params.seq_length
 
     def train_ds(ref self) -> ref[self.train_data] Tensor[INT]:
         return self.train_data
@@ -157,13 +129,13 @@ struct Dataset:
     ) raises -> Tuple[Tensor[INT], Tensor[INT]]:
         ref data_src = self.train_data if mode == "train" else self.val_data
         var indices = Tensor[INT].rand(
-            batch_size, high=len(data_src) - block_size
+            self.batch_size, high=len(data_src) - self.seq_length
         )
         var x = Tensor[INT].stack(
-            [data_src[idx : idx + block_size] for _, idx in indices]
+            [data_src[idx : idx + self.seq_length] for _, idx in indices]
         )
         var y = Tensor[INT].stack(
-            [data_src[idx + 1 : idx + block_size + 1] for _, idx in indices]
+            [data_src[idx + 1 : idx + self.seq_length + 1] for _, idx in indices]
         )
         return x^, y^
 
@@ -173,6 +145,7 @@ struct Loss:
     def estimate(
         mut model: BigramModel,
         ref dataset: Dataset,
+        eval_iters: Int,
     ) raises -> Dict[String, Float32]:
         model.eval()
         var out = {"train": Float32(0.0), "val": Float32(0.0)}
@@ -189,21 +162,23 @@ struct Loss:
 
 
 def main() raises:
+    var h_params = CmdLineArgs(argv())
+    print("Hyper params: ", h_params)
     var text = TinyShakespeare.text()
     var tokenizer = CharTokenizer(text)
 
     var vocab_size = len(tokenizer)
     print("Tokenizer len: ", len(tokenizer))
     var data = Tensor[INT].d1(tokenizer.encode(text^))
-    var dataset = Dataset(data^)
+    var dataset = Dataset(data^, h_params)
     var model = BigramModel(vocab_size)
 
     print(
         tokenizer.decode(
             model.generate(
                 Tensor[INT].zeros(1, 1),
-                max_new_tokens=100,
-                max_seed=max_seed,
+                max_new_tokens=h_params.max_new_tokens,
+                max_seed=h_params.seed_range,
             )[Indexer(0), Slicer()].tolist()
         )
     )
@@ -213,10 +188,10 @@ def main() raises:
         lr=Scalar[F32](learning_rate),
     )
 
-    for iter in range(max_iters):
+    for iter in range(h_params.max_iters):
         # every once in a while evaluate the loss on train and val sets
-        if (iter + 1) % eval_interval == 0:
-            var losses = Loss.estimate(model, dataset)
+        if (iter + 1) % h_params.eval_interval == 0:
+            var losses = Loss.estimate(model, dataset, h_params.eval_iters)
             print(
                 "Step {0}: train loss {1}, val loss {2}".format(
                     iter + 1, losses["train"], losses["val"]
@@ -233,13 +208,13 @@ def main() raises:
         loss_inner.backward()
         optimizer.step()
 
-        if (iter + 1) % gen_interval == 0:
+        if (iter + 1) % h_params.gen_interval == 0:
             print(
                 tokenizer.decode(
                     model.generate(
                         Tensor[INT].zeros(1, 1),
-                        max_new_tokens=500,
-                        max_seed=UInt64(100),
+                        max_new_tokens=h_params.max_new_tokens,
+                        max_seed=h_params.seed_range,
                     )[Indexer(0), Slicer()].tolist()
                 ),
                 end="\n",

@@ -54,7 +54,7 @@ Every 300 steps the script prints the training and validation loss, then a 500-c
 ```
 input.txt → CharPretokenizer → BPE core (no merges) → ids → 90% train / 10% validation
                                                                       │
-                                  random windows of block_size ids ◄──┘
+                                   random windows of seq_length ids ◄──┘
                                                 │
                             token + position embeddings
                                                 │
@@ -72,7 +72,8 @@ input.txt → CharPretokenizer → BPE core (no merges) → ids → 90% train / 
 
 | Piece | What it does |
 | --- | --- |
-| Constants at the top | All settings, in one place (see below) |
+| `shared.mojo` | `CmdLineArgs` and `TinyShakespeare`, shared by `bigram.mojo` and `chargpt.mojo` |
+| `CmdLineArgs` | All settings with defaults, overridable via `key=value` args (see below) |
 | `TinyShakespeare` | Downloads the text if it is not already in `/tmp` |
 | `Dataset` | 90/10 split and `random_batch`: random windows, with targets shifted by one character |
 | `Loss.estimate` | Average loss over several random batches of train and validation, with dropout off |
@@ -86,29 +87,29 @@ input.txt → CharPretokenizer → BPE core (no merges) → ids → 90% train / 
 
 ## Settings
 
-Everything lives in the constants at the top of the file.
+Settings are `CmdLineArgs` fields with defaults; override any via `key=value` args.
 
 | Constant | Value | What it does |
 | --- | --- | --- |
-| `block_size` | 48 | Context length in characters. The biggest lever on coherence |
+| `seq_length` | 32 | Context length in characters. The biggest lever on coherence |
 | `batch_size` | 32 | Windows per step |
-| `max_iters` | 8000 | Training steps |
+| `max_iters` | 10000 | Training steps |
 | `learning_rate` | 1e-3 | AdamW learning rate, constant (no schedule) |
-| `n_embd` | 320 | Width of every vector |
-| `n_head` | 5 | Attention heads, so 64 numbers per head |
-| `n_layer` | 5 | Transformer blocks |
-| `drop_ratio` | 0.1 | Dropout in attention and the MLP |
+| `n_embd` | 192 | Width of every vector |
+| `n_head` | 6 | Attention heads, so 32 numbers per head |
+| `n_layer` | 6 | Transformer blocks |
+| `drop_ratio` | 0.0 | Dropout in attention and the MLP |
 | `eval_interval` | 300 | Steps between evaluations and samples |
 | `eval_iters` | 50 | Batches averaged per evaluation |
 | `max_new_tokens` | 500 | Length of each sample |
 
-Each step sees 32 × 48 = 1,536 characters, so 8,000 steps see about 12.3 million characters: roughly 11 passes over the 1.1 million characters of text. The model has about 6.3 million parameters (a hand count; the script does not print it).
+Each step sees 32 × 32 = 1,024 characters, so 10,000 steps see about 10.2 million characters: roughly 9 passes over the 1.1 million characters of text. The model has about 6.3 million parameters (a hand count; the script does not print it).
 
 ## Results
 
 For scale, the loss of a model that knows nothing is ln 256 ≈ 5.55 nats, because the vocabulary is 256 byte values. Divide a loss in nats by ln 2 to get bits per character.
 
-An early run with `block_size = 8`, batch 32, 5,000 steps (about 1.15 passes over the data):
+An early run with `seq_length = 8`, batch 32, 5,000 steps (about 1.15 passes over the data):
 
 | Step | Train loss | Validation loss |
 | --- | --- | --- |
@@ -119,7 +120,7 @@ An early run with `block_size = 8`, batch 32, 5,000 steps (about 1.15 passes ove
 
 That is about 3.4 bits per character. Train and validation stayed close together and both were still falling, so that run was under-trained rather than over-fitted. For comparison, [nanoGPT](https://github.com/karpathy/nanoGPT)'s character-level Shakespeare config, with a 256-character context and far more tokens per step, reaches a validation loss of about 1.47 (about 2.1 bits).
 
-The current settings (`block_size = 48`, 8,000 steps) have not been written up yet. Run them and add your numbers here:
+The current defaults (`seq_length = 32`, 10,000 steps) have not been written up yet. Run them and add your numbers here:
 
 | Step | Train loss | Validation loss |
 | --- | --- | --- |
@@ -145,13 +146,13 @@ The model code does not know any of this. Swap in a pre-tokenizer that splits on
 - **GPU.** Everything runs on CPU, to keep the code small and free of device plumbing.
 - **A learning-rate schedule, gradient clipping, weight tying and checkpoint saving.** Training runs from scratch every time.
 - **A key-value cache.** Generation recomputes the whole context at each step, which is fine at this size.
-- **Configuration files or command-line flags.** The constants at the top are the interface.
+- **Configuration files.** Settings are passed as `key=value` command-line arguments (e.g. `mojo chargpt.mojo n_embd=96`); there is no config file.
 
 ## Things to try
 
 Predict first, then run.
 
-1. **Context.** Change `block_size` from 48 to 8, then to 128. What happens to the loss and to the text? Context costs little compute at this width.
+1. **Context.** Change `seq_length` from 32 to 8, then to 128. What happens to the loss and to the text? Context costs little compute at this width.
 2. **Overfit one batch.** Train on a single fixed batch. The loss should fall close to zero, which proves the plumbing works.
 3. **Dropout.** Set `drop_ratio` to 0.0. Over 11 passes, does the gap between train and validation loss change?
 4. **Position embeddings.** Remove them. Can the model still use word order?

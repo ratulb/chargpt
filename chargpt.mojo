@@ -1,5 +1,3 @@
-from std.pathlib import Path
-from std.os.process import Process
 from std.utils.numerics import neg_inf
 from std.math import sqrt
 from std.sys import argv
@@ -20,20 +18,8 @@ from tenmo.adamw import AdamW
 from tenmo.dropout import Dropout
 from tenmo.net import GeLU
 from tenmo.layernorm import LayerNorm
+from shared import CmdLineArgs, TinyShakespeare, learning_rate
 
-comptime download_url = "https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt"
-comptime input_file = "/tmp/input.txt"
-
-# comptime batch_size = 32
-# comptime block_size = 32
-# comptime eval_iters = 50
-# comptime eval_interval = 300
-# comptime max_iters = 10000
-# comptime max_new_tokens = 500
-comptime learning_rate = 1e-3
-# comptime n_embd = 192
-#comptime n_head = 6
-#comptime n_layer = 6
 comptime drop_ratio = 0.0
 
 comptime INT = DType.int
@@ -42,195 +28,10 @@ comptime F32 = DType.float32
 
 comptime HParams = CmdLineArgs
 
-@fieldwise_init
-struct CmdLineArgs(ImplicitlyCopyable, Writable):
-    var batch_size: Int
-    var block_size: Int
-    var eval_iters: Int
-    var eval_interval: Int
-    var max_iters: Int
-    var max_new_tokens: Int
-    var n_embd: Int
-    var n_head: Int
-    var n_layer: Int
-    var seed_range: UInt64
-
-    def __init__(
-        out self,
-        args: Span[StringSpan[ImmStaticOrigin], ImmStaticOrigin],
-        batch_size: Int = 32,
-        block_size: Int = 32,
-        eval_iters: Int = 50,
-        eval_interval: Int = 300,
-        max_iters: Int = 10000,
-        max_new_tokens: Int = 500,
-        n_embd: Int = 192,
-        n_head: Int = 6,
-        n_layer: Int = 6,
-        seed_range: UInt64 = 1000000,
-    ) raises:
-        var first = True
-        var arguments = Dict[String, String]()
-        for arg in args:
-            if first:
-                first = False
-                continue
-            var key_value = arg.split("=")
-            if key_value[0] in arguments:
-                continue
-            arguments[String(key_value[0])] = String(key_value[1])
-        print(arguments)
-
-        self.batch_size = (
-            Self.to_integer(arguments["batch_size"], batch_size) if "batch_size"
-            in arguments else batch_size
-        )
-        self.block_size = (
-            Self.to_integer(arguments["block_size"], block_size) if "block_size"
-            in arguments else block_size
-        )
-        self.eval_iters = (
-            Self.to_integer(arguments["eval_iters"], eval_iters) if "eval_iters"
-            in arguments else eval_iters
-        )
-        self.eval_interval = (
-            Self.to_integer(
-                arguments["eval_interval"], eval_interval
-            ) if "eval_interval"
-            in arguments else eval_interval
-        )
-        self.max_iters = (
-            Self.to_integer(arguments["max_iters"], max_iters) if "max_iters"
-            in arguments else max_iters
-        )
-
-        self.max_new_tokens = (
-            Self.to_integer(
-                arguments["max_new_tokens"], max_new_tokens
-            ) if "max_new_tokens"
-            in arguments else max_new_tokens
-        )
-        self.n_embd = (
-            Self.to_integer(arguments["n_embd"], n_embd) if "n_embd"
-            in arguments else n_embd
-        )
-
-        self.n_head = (
-            Self.to_integer(arguments["n_head"], n_head) if "n_head"
-            in arguments else n_head
-        )
-        self.n_layer = (
-            Self.to_integer(arguments["n_layer"], n_layer) if "n_layer"
-            in arguments else n_layer
-        )
-        self.seed_range = (
-            UInt64(
-                Self.to_integer(arguments["seed_range"], Int(seed_range))
-            ) if "seed_range"
-            in arguments else seed_range
-        )
-
-    @staticmethod
-    def to_integer(s: String, value: Int) -> Int:
-        try:
-            return Int(s)
-        except:
-            return value
-
-
-struct TinyShakespeare:
-    @staticmethod
-    def text() raises -> String:
-        var path = Path(input_file)
-        if not path.exists() or not path.is_file():
-            print("Downloading tiny shakespeare (~1MB)...")
-            var args = List[String]()
-            args.append("-P")
-            args.append("/tmp")
-            args.append(download_url)
-            var process = Process.run("wget", args^)
-            _ = process.wait()
-            print("Tiny shakespeare downloaded")
-
-        var content = path.read_text()
-        print("Total characters: ", content.byte_length())
-        print("Total code points: ", content.count_codepoints())
-        print("Total graphemes: ", content.count_graphemes())
-        print()
-        return content^
-
-
-struct Dataset:
-    var train_data: Tensor[INT]
-    var val_data: Tensor[INT]
-    var batch_size: Int
-    var block_size: Int
-
-    def __init__(
-        out self,
-        var data: Tensor[INT],
-        h_params: HParams,
-        split_ratio: Float64 = 0.9,
-    ):
-        var split = Int(split_ratio * Float64(len(data)))
-        self.train_data = data[:split]
-        self.val_data = data[split:]
-        self.batch_size = h_params.batch_size
-        self.block_size = h_params.block_size
-
-    def random_batch(
-        self,
-        mode: String,
-        batch_size_override: Optional[
-            Int
-        ] = None,  # Override batch size if need be. For example: Get initial prompt
-        block_size_override: Optional[
-            Int
-        ] = None,  # Override block size if needed. For example: For getting initail prompt
-    ) raises -> Tuple[Tensor[INT], Tensor[INT]]:
-        ref data_src = self.train_data if mode == "train" else self.val_data
-        var size_of_batch = batch_size_override.or_else(self.batch_size)
-        var size_of_block = block_size_override.or_else(self.block_size)
-        var indices = Tensor[INT].rand(
-            size_of_batch, high=len(data_src) - size_of_block
-        )
-        # In tenmo, iterating over a Tensor produces coord(s) and value(s).
-        # We are interested in the values.
-        var x = Tensor[INT].stack(
-            [data_src[idx : idx + size_of_block] for _, idx in indices]
-        )
-        var y = Tensor[INT].stack(
-            [data_src[idx + 1 : idx + size_of_block + 1] for _, idx in indices]
-        )
-        return x^, y^
-
-
-struct Loss:
-    @staticmethod
-    def estimate(
-        mut model: CharGPT,
-        ref dataset: Dataset,
-        eval_iters: Int,
-    ) raises -> Dict[String, Float32]:
-        model.eval()
-        var out = {"train": Float32(0.0), "val": Float32(0.0)}
-        for mode in ["train", "val"]:
-            var losses = Tensor[F32].zeros(eval_iters)
-            for k in range(eval_iters):
-                var (x, y) = dataset.random_batch(mode)
-                var (_, loss) = model(x, y)
-                # loss.value() because loss is Optional
-                losses[k] = loss.value().item()
-            out[mode] = losses.mean().item()
-        model.train()
-        return out^
-
 
 struct CharPretokenizer(PreTokenizer):
-    """Implment `PreTokenizer` trait from mbpe - to be used in conjunction with BPETokenizer.
-    Text would be token per unicode character codepoint.
+    """Implment `PreTokenizer` trait from mbpe - to be used in conjunction with BPETokenizer.    Text would be token per unicode character codepoint.
     """
-
     comptime byte_map: ByteMapping = ByteMapping.SEQUENTIAL
 
     def __init__(out self):
@@ -263,9 +64,56 @@ struct CharPretokenizer(PreTokenizer):
         writer.write(String("CharPretokenizer"))
 
 
+struct Dataset:
+    var train_data: Tensor[INT]
+    var val_data: Tensor[INT]
+    var batch_size: Int
+    var seq_length: Int
+
+    def __init__(
+        out self,
+        var data: Tensor[INT],
+        h_params: HParams,
+        split_ratio: Float64 = 0.9,
+    ):
+        var split = Int(split_ratio * Float64(len(data)))
+        self.train_data = data[:split]
+        self.val_data = data[split:]
+        self.batch_size = h_params.batch_size
+        self.seq_length = h_params.seq_length
+
+    def random_batch(
+        self,
+        mode: String,
+        batch_size_override: Optional[
+            Int
+        ] = None,  # Override batch size if need be. For example: Get initial prompt
+        seq_length_override: Optional[
+            Int
+        ] = None,  # Override block size if needed. For example: For getting initail prompt
+    ) raises -> Tuple[Tensor[INT], Tensor[INT]]:
+        ref data_src = self.train_data if mode == "train" else self.val_data
+        var size_of_batch = batch_size_override.or_else(self.batch_size)
+        var size_of_block = seq_length_override.or_else(self.seq_length)
+        var indices = Tensor[INT].rand(
+            size_of_batch, high=len(data_src) - size_of_block
+        )
+        # In tenmo, iterating over a Tensor produces coord(s) and value(s).
+        # We are interested in the values.
+        var x = Tensor[INT].stack(
+            [data_src[idx : idx + size_of_block] for _, idx in indices]
+        )
+        var y = Tensor[INT].stack(
+            [data_src[idx + 1 : idx + size_of_block + 1] for _, idx in indices]
+        )
+        return x^, y^
+
+
+# Multi-head causal self-attention: the decoder's "look back" block.
+# Q, K, V come from one fused linear (c_attn); the lower-triangular mask
+# (tril) hides future positions so token i attends only to tokens <= i.
 struct MultiHeadAttention:
     """Implement multi-head causal attention."""
-
     var n_head: Int
     var head_dim: Int
     var c_attn: Linear[F32]  # Fused QKV: n_embd -> 3*n_embd
@@ -273,8 +121,7 @@ struct MultiHeadAttention:
     var tril: Tensor[F32]
     var dropout: Dropout[F32]
     var inv_scale: Scalar[F32]  # Pre-calculated for scaling QK^
-
-    def __init__(out self, n_embd: Int, n_head: Int, block_size: Int):
+    def __init__(out self, n_embd: Int, n_head: Int, seq_length: Int):
         self.n_head = n_head
         self.head_dim = n_embd // n_head
         self.c_attn = Linear[F32](
@@ -286,16 +133,18 @@ struct MultiHeadAttention:
         self.c_proj = Linear[F32](
             in_features=n_embd, out_features=n_embd, init_method="normal"
         )
-        self.tril = Tensor[F32].ones(block_size, block_size).tril()
+        self.tril = Tensor[F32].ones(seq_length, seq_length).tril()
         self.dropout = Dropout[F32](drop_ratio)
         self.inv_scale = Scalar[F32](1.0 / sqrt(Float64(self.head_dim)))
 
     def __call__(mut self, x: Tensor[F32]) raises -> Tensor[F32]:
+        # Causal multi-head attention forward.
         ref x_shape = x.shape()
         var B = x_shape[0]
         var T = x_shape[1]
         var C = x_shape[2]
 
+        # Fused QKV projection, then split along feature axis.
         var qkv = self.c_attn(x)  # (B, T, 3*C)
         var q = qkv.slice(0, C, axis=2)  # (B, T, C)
         var k = qkv.slice(C, 2 * C, axis=2)  # (B, T, C)
@@ -338,12 +187,12 @@ struct MultiHeadAttention:
         self.dropout.training = False
 
 
+# Position-wise feed-forward network: widen 4x, GELU, project back, dropout.
 struct MLP:
     var c_fc: Linear[F32]
     var gelu: GeLU[F32]
     var c_proj: Linear[F32]
     var dropout: Dropout[F32]
-
     def __init__(out self, n_embd: Int):
         self.c_fc = Linear[F32](
             in_features=n_embd, out_features=4 * n_embd, init_method="normal"
@@ -379,16 +228,17 @@ struct MLP:
         self.dropout.training = False
 
 
+# One pre-norm transformer block: LayerNorm -> causal attention -> residual,
+# then LayerNorm -> MLP -> residual.
 struct Block:
     var ln1: LayerNorm[F32]
     var attn: MultiHeadAttention
     var ln2: LayerNorm[F32]
     var mlp: MLP
-
     def __init__(out self, h_params: HParams):
         self.ln1 = LayerNorm[F32](h_params.n_embd)
         self.attn = MultiHeadAttention(
-            h_params.n_embd, h_params.n_head, h_params.block_size
+            h_params.n_embd, h_params.n_head, h_params.seq_length
         )
         self.ln2 = LayerNorm[F32](h_params.n_embd)
         self.mlp = MLP(h_params.n_embd)
@@ -422,9 +272,9 @@ struct Block:
         self.mlp.eval()
 
 
+# Decoder-only GPT: token+position embeddings -> N blocks -> final LayerNorm -> lm_head.
 struct CharGPT:
     """The character based generative model."""
-
     var token_embedding_table: Embedding[F32]
     var position_embedding_table: Embedding[F32]
     var blocks: List[Block]
@@ -438,7 +288,7 @@ struct CharGPT:
             vocab_size, h_params.n_embd, init_method="normal"
         )
         self.position_embedding_table = Embedding[F32](
-            h_params.block_size, h_params.n_embd, init_method="normal"
+            h_params.seq_length, h_params.n_embd, init_method="normal"
         )
         self.blocks = List[Block](capacity=h_params.n_layer)
         for _ in range(h_params.n_layer):
@@ -455,25 +305,30 @@ struct CharGPT:
     def __call__(
         mut self, indices: Tensor[INT], targets: Optional[Tensor[INT]] = None
     ) raises -> Tuple[Tensor[F32], Optional[Tensor[F32]]]:
+        # Forward pass of the decoder: embeddings -> blocks -> head.
         ref indices_shape = indices.shape()
         var token_count = indices_shape[1]
 
+        # Look up token and absolute position embeddings, then add (broadcasts).
         var token_embeddings = self.token_embedding_table(
             indices.to_dtype[INT64]()
-        )  # B, T, n_embd
+        )  # (B, T, n_embd)
         var position_embeddings = self.position_embedding_table(
             Tensor[INT64].arange(Int64(token_count))
-        )  # T, n_embd
+        )  # (T, n_embd) broadcasts to (B, T, n_embd)
         var x = token_embeddings + position_embeddings
 
+        # Run through N pre-norm transformer blocks.
         for i in range(len(self.blocks)):
             ref block = self.blocks[i]
             x = block(x)
 
+        # Final LayerNorm then linear projection to vocabulary logits.
         x = self.ln_f(x)
-        var logits = self.lm_head(x)
+        var logits = self.lm_head(x)  # (B, T, vocab_size)
         var loss: Optional[Tensor[F32]] = None
 
+        # Training: flatten (B,T) -> (B*T) and compute cross-entropy vs targets.
         if targets:
             ref logits_shape = logits.shape()
             var B, T, C = logits_shape[0], logits_shape[1], logits_shape[2]
@@ -527,36 +382,59 @@ struct CharGPT:
         max_new_tokens: Int,
         seed_range: UInt64,  # multinomial sets seed at `42` if not provided!
     ) raises -> Tensor[INT]:
+        # Autoregressive decoding: append one sampled token at a time.
         self.eval()
         # indices (B, T) from current context
         var appended = indices.clone()
         seed()
         for _ in range(max_new_tokens):
-            # Position embeddings only have `block_size` rows, so the model
-            # cannot accept a context longer than block_size. Crop the growing
-            # generated sequence to its last block_size tokens (like
-            # idx[:, -block_size:] in nanoGPT) before each forward pass.
+            # Position embeddings only have `seq_length` rows, so the model
+            # cannot accept a context longer than seq_length. Crop the growing
+            # generated sequence to its last seq_length tokens (like
+            # idx[:, -seq_length:] in nanoGPT) before each forward pass.
             var T = appended.shape()[1]
             var idx_cond: Tensor[INT]
-            if T <= self.h_params.block_size:
+            if T <= self.h_params.seq_length:
                 idx_cond = appended.clone()
             else:
-                var start = T - self.h_params.block_size
+                var start = T - self.h_params.seq_length
                 idx_cond = appended[Slicer(), Slicer(start, None, None)]
             var (logits, _) = self(idx_cond)
-            # logits now (B, C)
+            # Take logits for the last position -> (B, vocab_size).
             logits = logits[Slicer(), -1, Slicer()]
+            # Convert to probabilities and sample next token id.
             var probas = logits.softmax[track_grad=False](axes=[-1])
             # next_id's shape (B, 1)
             var next_id = probas.multinomial[index_dtype=INT](
                 init_seed=Int(random_ui64(0, seed_range))
             )
+            # Append sampled token to the running sequence.
             appended = Tensor[INT].concat[track_grad=False](
                 [appended, next_id], axis=1
             )
         self.train()
-        return appended^  # (B, T+1)
+        return appended^  # (B, T+max_new_tokens)
 
+
+struct Loss:
+    @staticmethod
+    def estimate(
+        mut model: CharGPT,
+        ref dataset: Dataset,
+        eval_iters: Int,
+    ) raises -> Dict[String, Float32]:
+        model.eval()
+        var out = {"train": Float32(0.0), "val": Float32(0.0)}
+        for mode in ["train", "val"]:
+            var losses = Tensor[F32].zeros(eval_iters)
+            for k in range(eval_iters):
+                var (x, y) = dataset.random_batch(mode)
+                var (_, loss) = model(x, y)
+                # loss.value() because loss is Optional
+                losses[k] = loss.value().item()
+            out[mode] = losses.mean().item()
+        model.train()
+        return out^
 
 
 def generate_text(
@@ -604,14 +482,14 @@ def main() raises:
     var optimizer = AdamW[F32](
         model.parameters(),
         lr=Scalar[F32](learning_rate),
-        #clip_norm=Scalar[F32](1),
-        #clip_value=Scalar[F32](0.5),
+        # clip_norm=Scalar[F32](1),
+        # clip_value=Scalar[F32](0.5),
     )
     model.train()
 
     var losses = Loss.estimate(model, dataset, h_params.eval_iters)
     print(
-        "Starting: train loss {1}, val loss {2}".format(
+        "Starting: train loss {0}, val loss {1}".format(
             losses["train"], losses["val"]
         )
     )
