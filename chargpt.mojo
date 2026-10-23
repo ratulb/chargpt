@@ -2,6 +2,7 @@ from std.pathlib import Path
 from std.os.process import Process
 from std.utils.numerics import neg_inf
 from std.math import sqrt
+from std.sys import argv
 
 from tenmo.tensor import Tensor
 from bpe import BPETokenizer
@@ -23,29 +24,118 @@ from tenmo.layernorm import LayerNorm
 comptime download_url = "https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt"
 comptime input_file = "/tmp/input.txt"
 
-comptime block_size = 64
-# comptime block_size = 8
-comptime batch_size = 32
-comptime eval_iters = 50  # 200
-comptime max_iters = 10000
-# comptime max_iters = 5
-comptime max_new_tokens = 500
-comptime eval_interval = 300
-# comptime gen_interval = 500
+# comptime batch_size = 32
+# comptime block_size = 32
+# comptime eval_iters = 50
+# comptime eval_interval = 300
+# comptime max_iters = 10000
+# comptime max_new_tokens = 500
 comptime learning_rate = 1e-3
-comptime n_embd = 320
-comptime n_head = 5
-comptime n_layer = 5
-# comptime n_embd = 32
-# comptime n_head = 2
-# comptime n_layer = 2
-
-#comptime drop_ratio = 0.1
+# comptime n_embd = 192
+#comptime n_head = 6
+#comptime n_layer = 6
 comptime drop_ratio = 0.0
 
 comptime INT = DType.int
 comptime INT64 = DType.int64
 comptime F32 = DType.float32
+
+comptime HParams = CmdLineArgs
+
+@fieldwise_init
+struct CmdLineArgs(ImplicitlyCopyable, Writable):
+    var batch_size: Int
+    var block_size: Int
+    var eval_iters: Int
+    var eval_interval: Int
+    var max_iters: Int
+    var max_new_tokens: Int
+    var n_embd: Int
+    var n_head: Int
+    var n_layer: Int
+    var seed_range: UInt64
+
+    def __init__(
+        out self,
+        args: Span[StringSpan[ImmStaticOrigin], ImmStaticOrigin],
+        batch_size: Int = 32,
+        block_size: Int = 32,
+        eval_iters: Int = 50,
+        eval_interval: Int = 300,
+        max_iters: Int = 10000,
+        max_new_tokens: Int = 500,
+        n_embd: Int = 192,
+        n_head: Int = 6,
+        n_layer: Int = 6,
+        seed_range: UInt64 = 1000000,
+    ) raises:
+        var first = True
+        var arguments = Dict[String, String]()
+        for arg in args:
+            if first:
+                first = False
+                continue
+            var key_value = arg.split("=")
+            if key_value[0] in arguments:
+                continue
+            arguments[String(key_value[0])] = String(key_value[1])
+        print(arguments)
+
+        self.batch_size = (
+            Self.to_integer(arguments["batch_size"], batch_size) if "batch_size"
+            in arguments else batch_size
+        )
+        self.block_size = (
+            Self.to_integer(arguments["block_size"], block_size) if "block_size"
+            in arguments else block_size
+        )
+        self.eval_iters = (
+            Self.to_integer(arguments["eval_iters"], eval_iters) if "eval_iters"
+            in arguments else eval_iters
+        )
+        self.eval_interval = (
+            Self.to_integer(
+                arguments["eval_interval"], eval_interval
+            ) if "eval_interval"
+            in arguments else eval_interval
+        )
+        self.max_iters = (
+            Self.to_integer(arguments["max_iters"], max_iters) if "max_iters"
+            in arguments else max_iters
+        )
+
+        self.max_new_tokens = (
+            Self.to_integer(
+                arguments["max_new_tokens"], max_new_tokens
+            ) if "max_new_tokens"
+            in arguments else max_new_tokens
+        )
+        self.n_embd = (
+            Self.to_integer(arguments["n_embd"], n_embd) if "n_embd"
+            in arguments else n_embd
+        )
+
+        self.n_head = (
+            Self.to_integer(arguments["n_head"], n_head) if "n_head"
+            in arguments else n_head
+        )
+        self.n_layer = (
+            Self.to_integer(arguments["n_layer"], n_layer) if "n_layer"
+            in arguments else n_layer
+        )
+        self.seed_range = (
+            UInt64(
+                Self.to_integer(arguments["seed_range"], Int(seed_range))
+            ) if "seed_range"
+            in arguments else seed_range
+        )
+
+    @staticmethod
+    def to_integer(s: String, value: Int) -> Int:
+        try:
+            return Int(s)
+        except:
+            return value
 
 
 struct TinyShakespeare:
@@ -73,11 +163,20 @@ struct TinyShakespeare:
 struct Dataset:
     var train_data: Tensor[INT]
     var val_data: Tensor[INT]
+    var batch_size: Int
+    var block_size: Int
 
-    def __init__(out self, var data: Tensor[INT], split_ratio: Float64 = 0.9):
+    def __init__(
+        out self,
+        var data: Tensor[INT],
+        h_params: HParams,
+        split_ratio: Float64 = 0.9,
+    ):
         var split = Int(split_ratio * Float64(len(data)))
         self.train_data = data[:split]
         self.val_data = data[split:]
+        self.batch_size = h_params.batch_size
+        self.block_size = h_params.block_size
 
     def random_batch(
         self,
@@ -90,8 +189,8 @@ struct Dataset:
         ] = None,  # Override block size if needed. For example: For getting initail prompt
     ) raises -> Tuple[Tensor[INT], Tensor[INT]]:
         ref data_src = self.train_data if mode == "train" else self.val_data
-        var size_of_batch = batch_size_override.or_else(batch_size)
-        var size_of_block = block_size_override.or_else(block_size)
+        var size_of_batch = batch_size_override.or_else(self.batch_size)
+        var size_of_block = block_size_override.or_else(self.block_size)
         var indices = Tensor[INT].rand(
             size_of_batch, high=len(data_src) - size_of_block
         )
@@ -111,6 +210,7 @@ struct Loss:
     def estimate(
         mut model: CharGPT,
         ref dataset: Dataset,
+        eval_iters: Int,
     ) raises -> Dict[String, Float32]:
         model.eval()
         var out = {"train": Float32(0.0), "val": Float32(0.0)}
@@ -174,7 +274,7 @@ struct MultiHeadAttention:
     var dropout: Dropout[F32]
     var inv_scale: Scalar[F32]  # Pre-calculated for scaling QK^
 
-    def __init__(out self, n_embd: Int, n_head: Int):
+    def __init__(out self, n_embd: Int, n_head: Int, block_size: Int):
         self.n_head = n_head
         self.head_dim = n_embd // n_head
         self.c_attn = Linear[F32](
@@ -285,11 +385,13 @@ struct Block:
     var ln2: LayerNorm[F32]
     var mlp: MLP
 
-    def __init__(out self, n_embd: Int, n_head: Int):
-        self.ln1 = LayerNorm[F32](n_embd)
-        self.attn = MultiHeadAttention(n_embd, n_head)
-        self.ln2 = LayerNorm[F32](n_embd)
-        self.mlp = MLP(n_embd)
+    def __init__(out self, h_params: HParams):
+        self.ln1 = LayerNorm[F32](h_params.n_embd)
+        self.attn = MultiHeadAttention(
+            h_params.n_embd, h_params.n_head, h_params.block_size
+        )
+        self.ln2 = LayerNorm[F32](h_params.n_embd)
+        self.mlp = MLP(h_params.n_embd)
 
     def __call__(mut self, x: Tensor[F32]) raises -> Tensor[F32]:
         var h = self.ln1(x)
@@ -329,22 +431,26 @@ struct CharGPT:
     var ln_f: LayerNorm[F32]
     var lm_head: Linear[F32]
     var criterion: CrossEntropyLoss[F32]
+    var h_params: HParams
 
-    def __init__(out self, vocab_size: Int):
+    def __init__(out self, vocab_size: Int, h_params: HParams):
         self.token_embedding_table = Embedding[F32](
-            vocab_size, n_embd, init_method="normal"
+            vocab_size, h_params.n_embd, init_method="normal"
         )
         self.position_embedding_table = Embedding[F32](
-            block_size, n_embd, init_method="normal"
+            h_params.block_size, h_params.n_embd, init_method="normal"
         )
-        self.blocks = List[Block](capacity=n_layer)
-        for _ in range(n_layer):
-            self.blocks.append(Block(n_embd, n_head))
-        self.ln_f = LayerNorm[F32](n_embd)
+        self.blocks = List[Block](capacity=h_params.n_layer)
+        for _ in range(h_params.n_layer):
+            self.blocks.append(Block(h_params))
+        self.ln_f = LayerNorm[F32](h_params.n_embd)
         self.lm_head = Linear[F32](
-            in_features=n_embd, out_features=vocab_size, init_method="normal"
+            in_features=h_params.n_embd,
+            out_features=vocab_size,
+            init_method="normal",
         )
         self.criterion = CrossEntropyLoss[F32]()
+        self.h_params = h_params
 
     def __call__(
         mut self, indices: Tensor[INT], targets: Optional[Tensor[INT]] = None
@@ -419,7 +525,7 @@ struct CharGPT:
         mut self,
         indices: Tensor[INT],
         max_new_tokens: Int,
-        seed_range: UInt64 = 100,  # multinomial sets seed at `42` if not provided!
+        seed_range: UInt64,  # multinomial sets seed at `42` if not provided!
     ) raises -> Tensor[INT]:
         self.eval()
         # indices (B, T) from current context
@@ -432,10 +538,10 @@ struct CharGPT:
             # idx[:, -block_size:] in nanoGPT) before each forward pass.
             var T = appended.shape()[1]
             var idx_cond: Tensor[INT]
-            if T <= block_size:
+            if T <= self.h_params.block_size:
                 idx_cond = appended.clone()
             else:
-                var start = T - block_size
+                var start = T - self.h_params.block_size
                 idx_cond = appended[Slicer(), Slicer(start, None, None)]
             var (logits, _) = self(idx_cond)
             # logits now (B, C)
@@ -448,24 +554,34 @@ struct CharGPT:
             appended = Tensor[INT].concat[track_grad=False](
                 [appended, next_id], axis=1
             )
+        self.train()
         return appended^  # (B, T+1)
 
 
+
 def generate_text(
-    tokenizer: BPETokenizer[_], mut model: CharGPT, dataset: Dataset
+    tokenizer: BPETokenizer[_],
+    mut model: CharGPT,
+    dataset: Dataset,
+    seed_range: UInt64,
+    max_new_tokens: Int,
 ) raises:
+    model.eval()
     # Get a random single batch from validation data with 5 char
     var rand_batch = dataset.random_batch("val", 1, 5)
     var rand_context = rand_batch[0]
     var generated = model.generate(
-        rand_context, max_new_tokens=max_new_tokens, seed_range=UInt64(100)
+        rand_context, max_new_tokens=max_new_tokens, seed_range=seed_range
     )
     var tokens = generated[Indexer(0), Slicer()].tolist()
     var text = tokenizer.decode(tokens)
     print(text)
+    model.train()
 
 
 def main() raises:
+    var h_params = CmdLineArgs(argv())
+    print("Hyper params: ", h_params)
     var text = TinyShakespeare.text()
     # We are training a character model - not a subword model
     # With mbpe's BPETokenizer we should be able to handle any unicode character thrown at it - not necessarily ascii
@@ -481,29 +597,52 @@ def main() raises:
     # Create tensor from text data
     var data = Tensor[INT].d1(tokenizer.encode(text^))
     # Create the dataset to train and test from
-    var dataset = Dataset(data^)
+    var dataset = Dataset(data^, h_params)
     # The character based generative model
-    var model = CharGPT(vocab_size)
+    var model = CharGPT(vocab_size, h_params)
 
     var optimizer = AdamW[F32](
         model.parameters(),
         lr=Scalar[F32](learning_rate),
-        # clip_norm=Scalar[F32](1),
-        # clip_value=Scalar[F32](0.5),
+        #clip_norm=Scalar[F32](1),
+        #clip_value=Scalar[F32](0.5),
     )
     model.train()
 
-    for step in range(max_iters):
+    var losses = Loss.estimate(model, dataset, h_params.eval_iters)
+    print(
+        "Starting: train loss {1}, val loss {2}".format(
+            losses["train"], losses["val"]
+        )
+    )
+    print()
+    generate_text(
+        tokenizer,
+        model,
+        dataset,
+        h_params.seed_range,
+        h_params.max_new_tokens,
+    )
+
+    print()
+
+    for step in range(h_params.max_iters):
         # every once in a while evaluate the loss on train and val sets
-        if (step + 1) % eval_interval == 0:
-            var losses = Loss.estimate(model, dataset)
+        if (step + 1) % h_params.eval_interval == 0:
+            var losses = Loss.estimate(model, dataset, h_params.eval_iters)
             print(
                 "Step {0}: train loss {1}, val loss {2}".format(
                     step + 1, losses["train"], losses["val"]
                 )
             )
             print()
-            generate_text(tokenizer, model, dataset)
+            generate_text(
+                tokenizer,
+                model,
+                dataset,
+                h_params.seed_range,
+                h_params.max_new_tokens,
+            )
 
         var (xb, yb) = dataset.random_batch("train")
         var output = model(xb, yb)
@@ -515,4 +654,6 @@ def main() raises:
         optimizer.step()
 
     model.eval()
-    generate_text(tokenizer, model, dataset)
+    generate_text(
+        tokenizer, model, dataset, h_params.seed_range, h_params.max_new_tokens
+    )

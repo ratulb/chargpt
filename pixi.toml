@@ -11,4 +11,4 @@ preview = ["pixi-build"]
 [dependencies]
 mojo = "1.1.0.*"
 max = ">=26.5,<=26.6"
-tenmo = { git = "https://github.com/ratulb/tenmo", rev = "86808055a" }
+tenmo = { git = "https://github.com/ratulb/tenmo", rev = "6ad6a8b" }

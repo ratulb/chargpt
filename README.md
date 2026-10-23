@@ -43,7 +43,8 @@ mojo chargpt.mojo
 To launch traing in detached mode(to survive remote connection break):
 
 ```bash
-setsid nohup mojo chargpt.mojo > chargpt_run.log 2>&1 < /dev/null & echo $! > chargpt_run.pid
+setsid nohup mojo chargpt.mojo > chargpt_run.log 2>&1 < /dev/null & \
+echo $! > chargpt_run.pid
 ```
 
 Every 300 steps the script prints the training and validation loss, then a 500-character sample. The prompt for each sample is five consecutive characters taken from a random place in the validation text, so the model never sees its own prompt during training. A final sample is printed when training ends.

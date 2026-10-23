@@ -11,13 +11,14 @@ from tenmo.adamw import AdamW
 comptime download_url = "https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt"
 comptime input_file = "/tmp/input.txt"
 
-comptime block_size = 8
+comptime block_size = 128
 comptime batch_size = 32
 comptime eval_iters = 200
-comptime max_iters = 3000
+comptime max_iters = 20000
 comptime eval_interval = 300
 comptime gen_interval = 500
-comptime learning_rate = 1e-2
+comptime learning_rate = 1e-3
+comptime max_seed = 1000000
 
 comptime INT = DType.int
 comptime INT64 = DType.int64
@@ -116,7 +117,7 @@ struct BigramModel:
         mut self,
         indices: Tensor[INT],
         max_new_tokens: Int,
-        max_seed: UInt64 = 100,
+        max_seed: UInt64 = max_seed,
     ) raises -> Tensor[INT]:
         # indices (B, T) from current context
         var appended = indices.clone()
@@ -162,7 +163,7 @@ struct Dataset:
             [data_src[idx : idx + block_size] for _, idx in indices]
         )
         var y = Tensor[INT].stack(
-            [data_src[idx + 1 : idx + block_size + 1] for i in indices]
+            [data_src[idx + 1 : idx + block_size + 1] for _, idx in indices]
         )
         return x^, y^
 
@@ -202,7 +203,7 @@ def main() raises:
             model.generate(
                 Tensor[INT].zeros(1, 1),
                 max_new_tokens=100,
-                max_seed=UInt64(vocab_size - 1),
+                max_seed=max_seed,
             )[Indexer(0), Slicer()].tolist()
         )
     )
