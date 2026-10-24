@@ -72,8 +72,7 @@ mojo chargpt.mojo batch_size=16 seq_length=32 max_iters=15000 n_embd=96 n_layer=
 To keep a long run going if your remote connection drops:
 
 ```bash
-setsid nohup mojo chargpt.mojo > chargpt_run.log 2>&1 < /dev/null &
-echo $! > chargpt_run.pid
+setsid nohup mojo chargpt.mojo > chargpt_run.log 2>&1 < /dev/null & echo $! > chargpt_run.pid
 ```
 
 ## Files
