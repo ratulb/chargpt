@@ -73,6 +73,7 @@ input.txt → CharPretokenizer → BPE core (no merges) → ids → 90% train / 
 | Piece | What it does |
 | --- | --- |
 | `shared.mojo` | `CmdLineArgs` and `TinyShakespeare`, shared by `bigram.mojo` and `chargpt.mojo` |
+| `bigram.mojo` | Minimal bigram baseline for comparison |
 | `CmdLineArgs` | All settings with defaults, overridable via `key=value` args (see below) |
 | `TinyShakespeare` | Downloads the text if it is not already in `/tmp` |
 | `Dataset` | 90/10 split and `random_batch`: random windows, with targets shifted by one character |
@@ -87,8 +88,7 @@ input.txt → CharPretokenizer → BPE core (no merges) → ids → 90% train / 
 
 ## Settings
 
-Settings are `CmdLineArgs` fields with defaults; override any via `key=value` args.
-
+Settings are `CmdLineArgs` fields with defaults; override any via `key=value` args, e.g. `mojo chargpt.mojo n_embd=96 n_layer=6`.
 | Constant | Value | What it does |
 | --- | --- | --- |
 | `seq_length` | 32 | Context length in characters. The biggest lever on coherence |
@@ -102,8 +102,10 @@ Settings are `CmdLineArgs` fields with defaults; override any via `key=value` ar
 | `eval_interval` | 300 | Steps between evaluations and samples |
 | `eval_iters` | 50 | Batches averaged per evaluation |
 | `max_new_tokens` | 500 | Length of each sample |
+| `gen_interval` | 500 | Steps between generated samples |
+| `seed_range` | 1000000 | Upper bound for the sampling seed |
 
-Each step sees 32 × 32 = 1,024 characters, so 10,000 steps see about 10.2 million characters: roughly 9 passes over the 1.1 million characters of text. The model has about 6.3 million parameters (a hand count; the script does not print it).
+Each step sees 32 × 32 = 1,024 characters, so 10,000 steps see about 10.2 million characters: roughly 9 passes over the 1.1 million characters of text. The model has about 2.7 million parameters (a hand count; the script does not print it).
 
 ## Results
 
