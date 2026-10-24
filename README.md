@@ -148,7 +148,7 @@ A bigram model on this text typically lands near 2.5 nats (Karpathy reports abou
 
 ### The starting loss
 
-Before the first step the script prints a starting loss and a sample of pure noise. With the default settings that loss is about 40, far above ln 256 ≈ 5.55, because the weights are initialized from a standard normal with standard deviation 1. That makes the initial logits large, and cross-entropy then penalizes confidently wrong predictions. This is expected: the optimizer pulls the weights down during the first few hundred steps, and by step 300 the loss is already around 3.4. If you want a starting loss near 5.55 you can switch `init_method` from `"normal"` to an Xavier/He initializer; that is not the default here so that the training curves above stay comparable.
+Before the first step the script prints a starting loss and a sample of pure noise. With the default settings that loss is about 40.2 (measured: 40.24 train, 40.24 val), far above ln 256 ≈ 5.55, because the weights are initialized from a standard normal with standard deviation 1. That makes the initial logits large, and cross-entropy then penalizes confidently wrong predictions. This is expected: the optimizer pulls the weights down during the first few hundred steps, and by step 300 the loss is already around 3.43 (train) / 3.51 (val). For the 96-wide run in the Results table the starting loss was 27.87 (train) / 27.93 (val). If you want a starting loss near 5.55 you can switch `init_method` from `"normal"` to an Xavier/He initializer; that is not the default here so that the training curves above stay comparable.
 
 ## Results
 
