@@ -1,30 +1,28 @@
-# =============================================================================
-# bigram.mojo - step 1: the simplest possible language model.
-#
-# A bigram model predicts the next character from the CURRENT character only.
-# It has no context and no attention: just a table with one row per character,
-# and that row holds the scores for what comes next. "After 'q', 'u' is very
-# likely" is exactly the kind of thing it can learn, and nothing more.
-#
-# It is the baseline for chargpt.mojo. Everything chargpt adds (embeddings of
-# position, attention, blocks) is an attempt to do better than this table.
-#
-# Reading guide:
-#   1. CharTokenizer   characters <-> integer ids (65 of them, built by hand)
-#   2. BigramModel     the table, the loss, and `generate`
-#   3. Dataset         random (input, target) windows
-#   4. Loss.estimate   a steadier loss reading than one batch gives
-#   5. main            data, model, optimizer, training loop
-#
-# Run it (settings are key=value arguments, see shared.mojo):
-#
-#   mojo bigram.mojo
-#   mojo bigram.mojo max_iters=5000 learning_rate=0.01
-#
-# Shape notation: B = batch size, T = sequence length, V = vocab size.
-# Here C (the last axis of the logits) is also V, because the table's rows
-# are scores over the vocabulary.
-# =============================================================================
+"""The simplest possible language model - bigram.mojo.
+
+   A bigram model predicts the next character from the CURRENT character only.
+   It has no context and no attention: just a table with one row per character,
+   and that row holds the scores for what comes next. "After 'q', 'u' is very
+   likely" is exactly the kind of thing it can learn, and nothing more.
+
+   It is the baseline for chargpt.mojo. Everything chargpt adds (embeddings of
+   position, attention, blocks) is an attempt to do better than this table.
+
+   Reader guide:
+   1. CharTokenizer   characters <-> integer ids (65 of them, built by hand)
+   2. BigramModel     the table, the loss, and `generate`
+   3. Dataset         random (input, target) windows
+   4. Loss.estimate   a steadier loss reading than one batch gives
+   5. main            data, model, optimizer, training loop
+
+   Run it (settings are key=value arguments, see shared.mojo):
+
+   mojo bigram.mojo
+   mojo bigram.mojo max_iters=5000 learning_rate=0.01
+
+   Shape notation: B = batch size, T = sequence length, V = vocab size.
+   Here C (the last axis of the logits) is also V, because the table's rows
+   are scores over the vocabulary."""
 
 from tenmo.tensor import Tensor
 from std.pathlib import Path
@@ -49,16 +47,17 @@ comptime F32 = DType.float32
 comptime HParams = CmdLineArgs
 
 
-# -----------------------------------------------------------------------------
-# 1. CharTokenizer: the hand-made version
-# -----------------------------------------------------------------------------
-# Collect the distinct bytes that occur in the text, sort them, and number
-# them 0, 1, 2, ... That gives about 65 ids for Tiny Shakespeare. This is the
-# whole idea of tokenisation in its simplest form: a lookup in each direction.
-#
-# chargpt.mojo does the same job with mbpe instead, and gets 256 ids (one per
-# possible byte value) rather than only the ones that happen to appear.
 struct CharTokenizer(Sized):
+    """
+    CharTokenizer: the hand-made version
+    Collect the distinct bytes that occur in the text, sort them, and number
+    them 0, 1, 2, ... That gives about 65 ids for Tiny Shakespeare. This is the
+    whole idea of tokenisation in its simplest form: a lookup in each direction.
+
+    chargpt.mojo does the same job with mbpe instead, and gets 256 ids (one per
+    possible byte value) rather than only the ones that happen to appear.
+    """
+
     var stoi: Dict[String, Int]  # "string to int": character -> id
     var itos: Dict[Int, String]  # "int to string": id -> character
 
@@ -87,21 +86,24 @@ struct CharTokenizer(Sized):
         return len(self.itos)
 
 
-# -----------------------------------------------------------------------------
-# 2. BigramModel: a V x V table
-# -----------------------------------------------------------------------------
-# `Embedding(vocab_size, vocab_size)` is a table with one row per character.
-# Looking up the row for the current character gives V scores (logits), one
-# for each character that could come next. Training adjusts the table so that
-# the right next character gets a high score.
-#
-# The whole model is V * V numbers (about 65 * 65 = 4,225).
 struct BigramModel:
+    """
+    BigramModel: a V x V table
+    `Embedding(vocab_size, vocab_size)` is a table with one row per character.
+    Looking up the row for the current character gives V scores (logits), one
+    for each character that could come next. Training adjusts the table so that
+    the right next character gets a high score.
+
+    The whole model is V * V numbers (about 65 * 65 = 4,225).
+    """
+
     var embedding_table: Embedding[F32]
     var criterion: CrossEntropyLoss[F32]
 
     def __init__(out self, vocab_size: Int):
-        self.embedding_table = Embedding[F32](vocab_size, vocab_size)
+        self.embedding_table = Embedding[F32](
+            vocab_size, vocab_size, init_method="kaiming"
+        )
         self.criterion = CrossEntropyLoss[F32]()
 
     def __call__(
@@ -132,12 +134,11 @@ struct BigramModel:
         # The only weights are the table itself.
         return self.embedding_table.parameters()
 
-    # No dropout or other mode-dependent layer here, so the flag changes
-    # nothing in practice. It is kept so this model has the same train/eval
-    # interface as CharGPT.
+    # Setting this on make code flow thru grad tracking path
     def train(mut self):
         self.embedding_table.training = True
 
+    # On eval mode - no grad is tracked
     def eval(mut self):
         self.embedding_table.training = False
 
@@ -151,6 +152,8 @@ struct BigramModel:
         # latest character, turn them into probabilities, draw one character
         # at random from those probabilities, append it, repeat.
         # indices (B, T) from current context
+        # Seeding for multinomial below
+        seed()
         var appended = indices.clone()
         for _ in range(max_new_tokens):
             # Logits for every position of the text so far: (B, T, V).
@@ -163,8 +166,7 @@ struct BigramModel:
             var probas = logits.softmax[track_grad=False](axes=[-1])
             # next_id's shape (B, 1)
             # `multinomial` draws one id according to those probabilities.
-            # It needs a seed, so we re-seed and pass a fresh random one.
-            seed()
+            # `multinomial` uses 42 as default seed! Pass a random one
             var next_id = probas.multinomial[index_dtype=INT](
                 init_seed=Int(random_ui64(0, max_seed))
             )
@@ -175,22 +177,23 @@ struct BigramModel:
         return appended^
 
 
-# -----------------------------------------------------------------------------
-# 3. Dataset: turning one long id sequence into training examples
-# -----------------------------------------------------------------------------
-# A training example is a random window of `seq_length` ids (x) and the same
-# window shifted one place to the right (y). At every position, y holds the
-# character that follows:
-#
-#   text:  T  o  _  b  e  _  o  r
-#   x:     T  o  _  b  e
-#   y:     o  _  b  e  _
-#
-# For a bigram model the window length does not change what is learnt (each
-# prediction uses only one character), it just packs more predictions into a
-# batch. It starts to matter in chargpt.mojo, where the model looks back over
-# the whole window.
 struct Dataset:
+    """Dataset: turning one long id sequence into training examples.
+    A training example is a random window of `seq_length` ids (x) and the same
+    window shifted one place to the right (y). At every position, y holds the
+    character that follows.
+
+    text:  T  o  _  b  e  _  o  r
+    x:     T  o  _  b  e
+    y:     o  _  b  e  _
+
+    For a bigram model the window length does not change what is learnt (each
+    prediction uses only one character), it just packs more predictions into a
+    batch. It starts to matter in chargpt.mojo, where the model looks back over
+    the whole window.
+
+    """
+
     var train_data: Tensor[INT]
     var val_data: Tensor[INT]
     var batch_size: Int
@@ -220,6 +223,8 @@ struct Dataset:
             self.batch_size, high=len(data_src) - self.seq_length
         )
         # x: (B, T) the windows;  y: (B, T) the same windows shifted by one.
+        # In tenmo iterating a Tensor returns coord(s) and value(s).
+        # We are intersted in the values
         var x = Tensor[INT].stack(
             [data_src[idx : idx + self.seq_length] for _, idx in indices]
         )
@@ -232,14 +237,16 @@ struct Dataset:
         return x^, y^
 
 
-# -----------------------------------------------------------------------------
-# 4. Loss.estimate: a steadier loss reading
-# -----------------------------------------------------------------------------
-# The loss of a single random batch is noisy. Averaging `eval_iters` batches
-# from each split gives a number that is comparable from one evaluation to the
-# next. Train and val should stay close together; a bigram table is far too
-# small to memorise the text.
 struct Loss:
+    """
+    Loss.estimate: a steadier loss reading
+    The loss of a single random batch is noisy. Averaging `eval_iters` batches
+    from each split gives a number that is comparable from one evaluation to the
+    next. Train and val should stay close together; a bigram table is far too
+    small to memorise the text.
+
+    """
+
     @staticmethod
     def estimate(
         mut model: BigramModel,
@@ -260,12 +267,11 @@ struct Loss:
         return out^
 
 
-# -----------------------------------------------------------------------------
-# 5. main: put it all together
-# -----------------------------------------------------------------------------
 def main() raises:
+    # Put it all together
     # Settings come from key=value arguments; an unknown key or an unparsable
-    # value is silently ignored, so check the "Hyper params" line below.
+    # value is silently ignored(and default gets picked, so check the
+    # "Hyper params" line below.
     var h_params = HParams(argv())
     print("Hyper params: ", h_params)
     var text = TinyShakespeare.text()
@@ -278,6 +284,11 @@ def main() raises:
     var dataset = Dataset(data^, h_params)
     var model = BigramModel(vocab_size)
 
+    # AdamW: gradient descent that adapts the step size of every weight.
+    var optimizer = AdamW[F32](
+        model.parameters(),
+        lr=Scalar[F32](h_params.learning_rate),
+    )
     # Text from the untrained model. The start "prompt" is a single id 0, the
     # first character in sorted order (the newline). Expect pure noise.
     print(
@@ -290,10 +301,11 @@ def main() raises:
         )
     )
 
-    # AdamW: gradient descent that adapts the step size of every weight.
-    var optimizer = AdamW[F32](
-        model.parameters(),
-        lr=Scalar[F32](h_params.learning_rate),
+    var losses = Loss.estimate(model, dataset, h_params.eval_iters)
+    print(
+        "Starting: train loss {0}, val loss {1}".format(
+            losses["train"], losses["val"]
+        )
     )
 
     # The training loop. One step = one batch:
