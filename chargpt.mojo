@@ -1,3 +1,29 @@
+"""A small character-level GPT, in Mojo, on CPU.
+
+   Reader guidance - The file goes from the small pieces to the whole:
+
+   CharPretokenizer     text -> one piece per character (mbpe plug-in)
+   Dataset              ids  -> random (input, target) windows
+   MultiHeadAttention   tokens look back at earlier tokens
+   MLP                  each token thinks on its own
+   Block                attention + MLP, each with a residual connection
+   CharGPT              embeddings -> N blocks -> logits (and `generate`)
+   Loss.estimate        a steadier loss reading than one batch gives
+   generate_text        print a sample, starting from a validation prompt
+   main                 tokenizer, data, model, optimizer, training loop
+
+   Run it (settings are key=value arguments, see shared.mojo):
+
+   mojo chargpt.mojo
+   mojo chargpt.mojo batch_size=32 seq_length=32 max_iters=3000 n_embd=192
+
+   Notation used in the shape comments below:
+   B = batch size       (windows per step)
+   T = sequence length  (characters per window, at most `seq_length`)
+   C = n_embd           (width of every vector)
+   V = vocab_size       (256 here: one id per byte value)
+   """
+
 from std.utils.numerics import neg_inf
 from std.math import sqrt
 from std.sys import argv
@@ -21,15 +47,27 @@ from tenmo.layernorm import LayerNorm
 from tenmo.shared.shapes import Shape
 from shared import CmdLineArgs, TinyShakespeare
 
+# Short names for the element types used throughout.
+# INT    token ids
+# INT64  what the embedding lookup expects
+# F32    all weights and activations
+
 comptime INT = DType.int
 comptime INT64 = DType.int64
 comptime F32 = DType.float32
 
+# The run-time settings (batch_size, seq_length, n_embd, ...) live in
+# `CmdLineArgs`, in shared.mojo. This alias only gives them a friendlier name.
 comptime HParams = CmdLineArgs
 
 
 struct CharPretokenizer(PreTokenizer):
-    """Implment `PreTokenizer` trait from mbpe - to be used in conjunction with BPETokenizer.    Text would be token per unicode character codepoint.
+    """
+    CharPretokenizer: what makes this a *character* model
+    mbpe's BPE core knows nothing about words or characters. Before any merging,
+    a pre-tokenizer cuts the text into pieces, and BPE only ever merges bytes
+    *inside* one piece. Here every piece is a single character, so no merge can
+    ever happen and the vocabulary stays at the 256 base byte values.
     """
 
     comptime byte_map: ByteMapping = ByteMapping.SEQUENTIAL
@@ -51,7 +89,8 @@ struct CharPretokenizer(PreTokenizer):
         var span = text.as_bytes()
         var pos = 0
         while pos < n:
-            # One "word" per codepoint. Clamp so a truncated trailing
+            # One "word" per codepoint. A UTF-8 character takes 1 to 4 bytes;
+            # the first byte tells us how many. Clamp so a truncated trailing
             # sequence never reads past the end.
             var end = pos + utf8_codepoint_byte_length(span[pos])
             if end > n:
@@ -65,6 +104,20 @@ struct CharPretokenizer(PreTokenizer):
 
 
 struct Dataset:
+    """
+    Dataset: turning one long id sequence into training examples
+    The whole text is one long list of ids. A training example is a random
+    window of `seq_length` ids (x) and the same window shifted one place to the
+    right (y). So at every position, y holds the character that follows:
+
+    text:  T  o  _  b  e  _  o  r
+    x:     T  o  _  b  e            (what the model sees)
+    y:     o  _  b  e  _            (what it must predict, position by position)
+
+    One window therefore carries `seq_length` separate predictions.
+
+    """
+
     var train_data: Tensor[INT]
     var val_data: Tensor[INT]
     var batch_size: Int
@@ -76,6 +129,8 @@ struct Dataset:
         h_params: HParams,
         split_ratio: Float64 = 0.9,
     ):
+        # First 90% of the text trains the model; the last 10% is held back
+        # for validation and never used to update weights.
         var split = Int(split_ratio * Float64(len(data)))
         self.train_data = data[:split]
         self.val_data = data[split:]
@@ -84,7 +139,7 @@ struct Dataset:
 
     def random_batch(
         self,
-        mode: String,
+        mode: String,  # "train" or "val": which part of the text to draw from
         batch_size_override: Optional[
             Int
         ] = None,  # Override batch size if need be. For example: Get initial prompt
@@ -93,18 +148,21 @@ struct Dataset:
         ] = None,  # Override block size if needed. For example: For getting initail prompt
     ) raises -> Tuple[Tensor[INT], Tensor[INT]]:
         ref data_src = self.train_data if mode == "train" else self.val_data
+
         var size_of_batch = batch_size_override.or_else(self.batch_size)
-        var size_of_block = seq_length_override.or_else(self.seq_length)
+        var size_of_seq = seq_length_override.or_else(self.seq_length)
+        # `size_of_batch` random start positions. `high` leaves room for the
+        # window plus the one extra character that the targets need.
         var indices = Tensor[INT].rand(
-            size_of_batch, high=len(data_src) - size_of_block
+            size_of_batch, high=len(data_src) - size_of_seq
         )
         # In tenmo, iterating over a Tensor produces coord(s) and value(s).
         # We are interested in the values.
         var x = Tensor[INT].stack(
-            [data_src[idx : idx + size_of_block] for _, idx in indices]
+            [data_src[idx : idx + size_of_seq] for _, idx in indices]
         )
         var y = Tensor[INT].stack(
-            [data_src[idx + 1 : idx + size_of_block + 1] for _, idx in indices]
+            [data_src[idx + 1 : idx + size_of_seq + 1] for _, idx in indices]
         )
         return x^, y^
 
@@ -113,21 +171,34 @@ struct Dataset:
 # Q, K, V come from one fused linear (c_attn); the lower-triangular mask
 # (tril) hides future positions so token i attends only to tokens <= i.
 struct MultiHeadAttention:
-    """Implement multi-head causal attention."""
+    """
+    MultiHeadAttention: the "look back" step.
+
+    Every position asks a question (query), every position offers a label (key)
+    and some content (value). A position scores each earlier position by how
+    well its query matches that position's key, turns the scores into weights
+    with softmax, and takes the weighted average of the values.
+
+    "Multi-head" means this is done n_head times in parallel, each head on its
+    own slice of head_dim = n_embd / n_head numbers, so different heads can look
+    for different things. "Causal" means a position may only look at itself and
+    earlier positions; the lower-triangular mask (tril) enforces that.
+    """
 
     var n_head: Int
     var head_dim: Int
     var c_attn: Linear[F32]  # Fused QKV: n_embd -> 3*n_embd
-    var c_proj: Linear[F32]
-    var tril: Tensor[F32]
+    var c_proj: Linear[F32]  # Output projection: mixes the heads back together
+    var tril: Tensor[F32]  # (seq_length, seq_length) lower-triangular 1s
     var dropout: Dropout[F32]
-    var inv_scale: Scalar[F32]  # Pre-calculated for scaling QK^
+    var inv_scale: Scalar[F32]  # 1/sqrt(head_dim), computed once
 
     def __init__(
         out self, n_embd: Int, n_head: Int, seq_length: Int, drop_ratio: Float32
     ):
         self.n_head = n_head
         self.head_dim = n_embd // n_head
+        # One matrix produces queries, keys and values in a single multiply.
         self.c_attn = Linear[F32](
             in_features=n_embd,
             out_features=3 * n_embd,
@@ -137,12 +208,16 @@ struct MultiHeadAttention:
         self.c_proj = Linear[F32](
             in_features=n_embd, out_features=n_embd, init_method="kaiming"
         )
+        # Row i of tril has ones in columns 0..i: "position i may look at
+        # positions 0..i". Built once, then sliced to the current length.
         self.tril = Tensor[F32].ones(seq_length, seq_length).tril()
         self.dropout = Dropout[F32](drop_ratio)
+        # Dividing the scores by sqrt(head_dim) keeps them from growing with
+        # the head size, which would push softmax into a near one-hot spike.
         self.inv_scale = Scalar[F32](1.0 / sqrt(Float64(self.head_dim)))
 
     def __call__(mut self, x: Tensor[F32]) raises -> Tensor[F32]:
-        # Causal multi-head attention forward.
+        # Causal multi-head attention forward. Input and output: (B, T, C).
         ref x_shape = x.shape()
         var B = x_shape[0]
         var T = x_shape[1]
@@ -153,33 +228,52 @@ struct MultiHeadAttention:
         var q = qkv.slice(0, C, axis=2)  # (B, T, C)
         var k = qkv.slice(C, 2 * C, axis=2)  # (B, T, C)
         var v = qkv.slice(2 * C, 3 * C, axis=2)  # (B, T, C)
-
+        # Split the C numbers of each token into n_head groups of head_dim,
+        # and move the head axis forward so each head is a separate batch
+        # entry for the matrix multiply:
+        # (B, T, C) -> (B, T, n_head, head_dim) -> (B, n_head, T, head_dim)
         q = q.reshape(B, T, self.n_head, self.head_dim).permute([0, 2, 1, 3])
-        # Alter head_dim and token permutation in one go to avoid transpose later
+        # For k we also swap T and head_dim in the same permute, giving
+        # (B, n_head, head_dim, T). That is k already transposed, ready for
+        # q @ k below, so no separate transpose is needed.
         k = k.reshape(B, T, self.n_head, self.head_dim).permute([0, 2, 3, 1])
         v = v.reshape(B, T, self.n_head, self.head_dim).permute([0, 2, 1, 3])
         # No need for transposing k, see comment above
+        # scores[i][j] = how much position i's query matches position j's key.
+        # (B, n_head, T, head_dim) @ (B, n_head, head_dim, T) -> (B, n_head, T, T)
         var scaled_attn_scores = (
             q.matmul(k) * self.inv_scale
         )  # (B, n_head, T, T)
+
+        # The mask goes in BEFORE softmax: every "future" cell (j > i) is set
+        # to -infinity, so softmax gives it exactly zero weight. Zeroing the
+        # weights afterwards would leave the rows not summing to 1.
         var masked_scores = scaled_attn_scores.masked_fill(
             self.tril[:T, :T] == 0, neg_inf[F32]()
         )
+        # Softmax over the last axis: each row becomes weights over the
+        # earlier positions that sum to 1.
         var attn_weights = masked_scores.softmax(axes=[-1])
         var attenuated_attn = self.dropout(attn_weights)
+        # Weighted average of the values: (B, n_head, T, T) @ (B, n_head, T, head_dim)
         var weighted_values = attenuated_attn.matmul(
             v
         )  # (B, n_head, T, head_dim)
-
+        # Put the heads back side by side: (B, n_head, T, hd) -> (B, T, C),
+        # then let c_proj mix information across heads.
         var values = weighted_values.permute([0, 2, 1, 3]).reshape(B, T, C)
         return self.c_proj(values)
 
     def parameters(ref self) -> List[Pointer[Tensor[F32], MutAnyOrigin]]:
+        # The optimizer needs a list of every weight it should update.
+        # `tril` is a constant mask, not a weight, so it is not included.
         var params = List[Pointer[Tensor[F32], MutAnyOrigin]]()
         params.extend(self.c_attn.parameters())
         params.extend(self.c_proj.parameters())
         return params^
 
+    # train()/eval() flip the `training` flag on every layer that behaves
+    # differently in the two modes (dropout in particular).
     def train(mut self):
         self.c_attn.training = True
         self.c_proj.training = True
@@ -191,10 +285,17 @@ struct MultiHeadAttention:
         self.dropout.training = False
 
 
-# Position-wise feed-forward network: widen 4x, GELU, project back, dropout.
 struct MLP:
-    var c_fc: Linear[F32]
-    var gelu: GeLU[F32]
+    """
+    MLP: the "think" step
+    Attention moves information *between* positions. The MLP then works on each
+    position separately: widen to 4x, apply a smooth non-linearity (GELU), and
+    narrow back. Without the non-linearity, two linear layers would collapse
+    into one.
+    """
+
+    var c_fc: Linear[F32]  # n_embd -> 4*n_embd
+    var gelu: GeLU[F32]  # 4*n_embd -> n_embd
     var c_proj: Linear[F32]
     var dropout: Dropout[F32]
 
@@ -233,9 +334,17 @@ struct MLP:
         self.dropout.training = False
 
 
-# One pre-norm transformer block: LayerNorm -> causal attention -> residual,
-# then LayerNorm -> MLP -> residual.
 struct Block:
+    """
+    Block: one transformer layer
+    Pre-norm layout: normalise, apply the sub-layer, and ADD the result to what
+    came in (a residual connection). The residual gives gradients a direct path
+    back through a deep stack, and lets each block make a small correction to
+    the running representation rather than rebuild it.
+    x -> LayerNorm -> attention -> (+ x) -> LayerNorm -> MLP -> (+ itself)
+
+    """
+
     var ln1: LayerNorm[F32]
     var attn: MultiHeadAttention
     var ln2: LayerNorm[F32]
@@ -281,9 +390,15 @@ struct Block:
         self.mlp.eval()
 
 
-# Decoder-only GPT: token+position embeddings -> N blocks -> final LayerNorm -> lm_head.
 struct CharGPT:
-    """The character based generative model."""
+    """
+    CharGPT: the whole model
+    ids (B, T) -> token + position embeddings -> n_layer blocks -> LayerNorm
+         -> linear head -> logits (B, T, V)
+
+    A logit is an unnormalised score. logits[b, t, :] holds one score for each
+    of the V possible next characters, given everything up to position t.
+    """
 
     var token_embedding_table: Embedding[F32]
     var position_embedding_table: Embedding[F32]
@@ -297,6 +412,8 @@ struct CharGPT:
         self.token_embedding_table = Embedding[F32](
             vocab_size, h_params.n_embd, init_method="kaiming"
         )
+        # One learned vector per position 0..seq_length-1. This is also why
+        # the model cannot take a context longer than seq_length(see `generate`).
         self.position_embedding_table = Embedding[F32](
             h_params.seq_length, h_params.n_embd, init_method="kaiming"
         )
@@ -316,6 +433,7 @@ struct CharGPT:
         mut self, indices: Tensor[INT], targets: Optional[Tensor[INT]] = None
     ) raises -> Tuple[Tensor[F32], Optional[Tensor[F32]]]:
         # Forward pass of the decoder: embeddings -> blocks -> head.
+        # Returns (logits, loss). The loss is None unless targets are given.
         ref indices_shape = indices.shape()
         var token_count = indices_shape[1]
 
@@ -326,6 +444,8 @@ struct CharGPT:
         var position_embeddings = self.position_embedding_table(
             Tensor[INT64].arange(Int64(token_count))
         )  # (T, n_embd) broadcasts to (B, T, n_embd)
+        # Attention itself has no sense of order; the position vectors are
+        # what tell the model "this is the 3rd character, that is the 7th".
         var x = token_embeddings + position_embeddings
 
         # Run through N pre-norm transformer blocks.
@@ -339,6 +459,9 @@ struct CharGPT:
         var loss: Optional[Tensor[F32]] = None
 
         # Training: flatten (B,T) -> (B*T) and compute cross-entropy vs targets.
+        # Cross-entropy is -log(probability given to the true next character),
+        # averaged over all B*T predictions. Each prediction is a row of
+        # V scores with one correct answer, hence the flattening.
         if targets:
             ref logits_shape = logits.shape()
             var B, T, C = logits_shape[0], logits_shape[1], logits_shape[2]
@@ -350,6 +473,7 @@ struct CharGPT:
         return logits^, loss^
 
     def parameters(ref self) -> List[Pointer[Tensor[F32], MutAnyOrigin]]:
+        # Collect every weight in the model, for the optimizer.
         var params = List[Pointer[Tensor[F32], MutAnyOrigin]]()
         params.extend(self.token_embedding_table.parameters())
         params.extend(self.position_embedding_table.parameters())
@@ -393,6 +517,10 @@ struct CharGPT:
         seed_range: UInt64,  # multinomial sets seed at `42` if not provided!
     ) raises -> Tensor[INT]:
         # Autoregressive decoding: append one sampled token at a time.
+        # eval() switches dropout off; train() at the end switches it back.
+        # Forgetting that last call leaves training silently running in eval
+        # mode after the first sample - this was hard lesson.
+        # Forgot to set train() back and loss went thru the roof
         self.eval()
         # indices (B, T) from current context
         var appended = indices.clone()
@@ -413,6 +541,9 @@ struct CharGPT:
             # Take logits for the last position -> (B, vocab_size).
             logits = logits[Slicer(), -1, Slicer()]
             # Convert to probabilities and sample next token id.
+            # Sampling (not picking the most likely character) is what keeps
+            # the text varied. This is the place where temperature and top-k
+            # would act: both reshape these probabilities before the draw.
             var probas = logits.softmax[track_grad=False](axes=[-1])
             # next_id's shape (B, 1)
             var next_id = probas.multinomial[index_dtype=INT](
@@ -488,7 +619,7 @@ struct CharGPT:
             # Build the masked logit vector: -inf everywhere, scaled survivors in
             # their original positions. exp(-inf) == 0 in softmax, so masked
             # entries get exactly zero probability.
-            #var masked = Tensor[F32].zeros(V) + neg_inf[F32]()
+            # var masked = Tensor[F32].zeros(V) + neg_inf[F32]()
             var masked = Tensor[F32].full(Shape(V), neg_inf[F32]())
             for i in range(top_k):
                 masked[kept[i]] = kept_values[i]
@@ -514,6 +645,7 @@ struct CharGPT:
         )
         return Int(drawn.item())
 
+
 struct Loss:
     @staticmethod
     def estimate(
@@ -521,6 +653,14 @@ struct Loss:
         ref dataset: Dataset,
         eval_iters: Int,
     ) raises -> Dict[String, Float32]:
+        """
+        Loss.estimate: a steadier loss reading
+        The loss of a single random batch is noisy. Averaging `eval_iters` batches
+        from each split gives a number that is comparable from one evaluation to the
+        next. Watch the two numbers together: train and val falling together means
+        the model is learning the language; val stalling or rising while train keeps
+        falling means it is starting to memorise the training text.
+        """
         model.eval()
         var out = {"train": Float32(0.0), "val": Float32(0.0)}
         for mode in ["train", "val"]:
@@ -531,6 +671,7 @@ struct Loss:
                 # loss.value() because loss is Optional
                 losses[k] = loss.value().item()
             out[mode] = losses.mean().item()
+        # hand the model back in training mode
         model.train()
         return out^
 
@@ -542,6 +683,13 @@ def generate_text(
     seed_range: UInt64,
     max_new_tokens: Int,
 ) raises:
+    """
+    generate_text: show what the model has learned so far
+    The starting prompt is 5 consecutive characters from a random place in the
+    validation text, which the model never trains on, so the sample is not
+    something it could simply be repeating from memory.
+    """
+
     model.eval()
     # Get a random single batch from validation data with 5 char sequence
     var rand_batch = dataset.random_batch("val", 1, 5)  # tuple of tensors
@@ -549,6 +697,7 @@ def generate_text(
     var generated = model.generate(
         rand_context, max_new_tokens=max_new_tokens, seed_range=seed_range
     )
+    # Row 0 of the (1, T+max_new_tokens) result, turned back into text.
     var tokens = generated[Indexer(0), Slicer()].tolist()
     var text = tokenizer.decode(tokens)
     print(text)
@@ -556,6 +705,9 @@ def generate_text(
 
 
 def main() raises:
+    # Settings come from key=value arguments; anything not given keeps its
+    # default. An unknown key or an unparsable value is silently ignored,
+    # so check the "Hyper params" line printed below.
     var h_params = HParams(argv())
     print("Hyper params: ", h_params)
     var text = TinyShakespeare.text()
@@ -576,7 +728,9 @@ def main() raises:
     var dataset = Dataset(data^, h_params)
     # The character based generative model
     var model = CharGPT(vocab_size, h_params)
-
+    # AdamW keeps a running average of each weight's gradient and of its
+    # square, and scales each step by them. Gradient clipping is available
+    # but switched off here.
     var optimizer = AdamW[F32](
         model.parameters(),
         lr=Scalar[F32](h_params.learning_rate),
@@ -584,7 +738,9 @@ def main() raises:
         # clip_value=Scalar[F32](0.5),
     )
     model.train()
-
+    # Before any training: a model that knows nothing should score about
+    # ln(256) = 5.55. If this line is far from that, something is wrong.
+    # We get 6~7 - that is mistry that needs to be explained
     var losses = Loss.estimate(model, dataset, h_params.eval_iters)
     print(
         "Starting: train loss {0}, val loss {1}".format(
@@ -601,7 +757,8 @@ def main() raises:
     )
 
     print()
-
+    # The training loop. One step = one batch:
+    # forward -> loss -> clear old gradients -> backward -> weight update
     for step in range(h_params.max_iters):
         # every once in a while evaluate the loss on train and val sets
         if (step + 1) % h_params.eval_interval == 0:
@@ -625,11 +782,15 @@ def main() raises:
         ref loss = output[1]
         # loss is returned as Optional - hence `value()`
         ref loss_inner = loss.value()
+        # gradients accumulate, so clear the last step's
         optimizer.zero_grad()
+        # how should each weight change to lower loss?
         loss_inner.backward()
+        # nudge every weight a little in that direction
         optimizer.step()
 
     model.eval()
+    # A final sample from the trained model.
     generate_text(
         tokenizer, model, dataset, h_params.seed_range, h_params.max_new_tokens
     )
