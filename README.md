@@ -180,7 +180,7 @@ mojo chargpt.mojo batch_size=16 seq_length=32 max_iters=15000 n_embd=96 n_layer=
 | 13,500 | 1.67 | 1.83 |
 | 13,800 | 1.64 | 1.78 |
 | 14,100 | 1.66 | 1.79 |
-
+| 15,000 | 1.65 | 1.82 |
 Each reading averages only 50 batches, so differences of a few hundredths between rows are noise. The gap of about 0.13 between train and validation is small but real: the model has begun to fit the training text a little better than the validation text.
 
 ## Where the code is
