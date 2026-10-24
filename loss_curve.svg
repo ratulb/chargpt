@@ -1,19 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="960" height="520" viewBox="0 0 960 520">
 <rect width="100%" height="100%" fill="white"/>
-<defs><clipPath id="p"><rect x="70" y="70" width="820" height="380"/></clipPath></defs>
-<!-- grid -->
 <line x1="70" y1="450.0" x2="890" y2="450.0" stroke="#eee"/>
 <text x="62" y="454.0" text-anchor="end" font-size="11" fill="#555">1.50</text>
 <line x1="70" y1="374.0" x2="890" y2="374.0" stroke="#eee"/>
-<text x="62" y="378.0" text-anchor="end" font-size="11" fill="#555">1.60</text>
+<text x="62" y="378.0" text-anchor="end" font-size="11" fill="#555">1.70</text>
 <line x1="70" y1="298.0" x2="890" y2="298.0" stroke="#eee"/>
-<text x="62" y="302.0" text-anchor="end" font-size="11" fill="#555">1.70</text>
+<text x="62" y="302.0" text-anchor="end" font-size="11" fill="#555">1.90</text>
 <line x1="70" y1="222.0" x2="890" y2="222.0" stroke="#eee"/>
-<text x="62" y="226.0" text-anchor="end" font-size="11" fill="#555">1.80</text>
+<text x="62" y="226.0" text-anchor="end" font-size="11" fill="#555">2.10</text>
 <line x1="70" y1="146.0" x2="890" y2="146.0" stroke="#eee"/>
-<text x="62" y="150.0" text-anchor="end" font-size="11" fill="#555">1.90</text>
+<text x="62" y="150.0" text-anchor="end" font-size="11" fill="#555">2.30</text>
 <line x1="70" y1="70.0" x2="890" y2="70.0" stroke="#eee"/>
-<text x="62" y="74.0" text-anchor="end" font-size="11" fill="#555">2.00</text>
+<text x="62" y="74.0" text-anchor="end" font-size="11" fill="#555">2.50</text>
 <line x1="70.0" y1="70" x2="70.0" y2="450" stroke="#eee"/>
 <text x="70.0" y="466" text-anchor="middle" font-size="11" fill="#555">0</text>
 <line x1="234.0" y1="70" x2="234.0" y2="450" stroke="#eee"/>
@@ -31,11 +29,9 @@
 <line x1="70" y1="70" x2="70" y2="450" stroke="black"/>
 <text x="480.0" y="508" text-anchor="middle" font-size="13">training step</text>
 <text x="16" y="260.0" text-anchor="middle" font-size="13" transform="rotate(-90 16 260.0)">loss (nats)</text>
-<text x="480.0" y="24" text-anchor="middle" font-size="15" font-weight="bold">Validation vs training loss (zoomed)</text>
-<g clip-path="url(#p)">
-<path d="                            L 529.2,106.6 L 545.6,121.1 L 562.0,130.7 L 578.4,154.8 L 594.8,175.2 L 611.2,189.9 L 627.6,213.8 L 644.0,213.9 L 660.4,223.7 L 676.8,241.6 L 693.2,238.5 L 709.6,255.2 L 726.0,282.8 L 742.4,287.7 L 758.8,297.7 L 775.2,292.1 L 791.6,301.0 L 808.0,305.8 L 824.4,299.4 L 840.8,318.9 L 857.2,332.2 L 873.6,342.8 L 890.0,335.6 " fill="none" stroke="#1f77b4" stroke-width="2.5"/>
-<path d="                                L 594.8,71.8 L 611.2,92.5 L 627.6,101.4 L 644.0,111.4 L 660.4,132.6 L 676.8,125.4 L 693.2,141.1 L 709.6,157.5 L 726.0,169.8 L 742.4,177.5 L 758.8,159.2 L 775.2,170.4 L 791.6,165.0 L 808.0,190.5 L 824.4,190.1 L 840.8,202.4 L 857.2,205.6 L 873.6,224.7 L 890.0,208.7 " fill="none" stroke="#d62728" stroke-width="2.5"/>
-</g>
+<text x="480.0" y="24" text-anchor="middle" font-size="15" font-weight="bold">Training and validation loss (zoomed)</text>
+<path d="M 316.0,76.0 L 332.4,90.9 L 348.8,112.9 L 365.2,129.1 L 381.6,146.7 L 398.0,160.5 L 414.4,172.1 L 430.8,184.6 L 447.2,207.9 L 463.6,218.4 L 480.0,231.9 L 496.4,245.2 L 512.8,247.9 L 529.2,278.3 L 545.6,285.5 L 562.0,290.3 L 578.4,302.4 L 594.8,312.6 L 611.2,319.9 L 627.6,331.9 L 644.0,332.0 L 660.4,336.9 L 676.8,345.8 L 693.2,344.3 L 709.6,352.6 L 726.0,366.4 L 742.4,368.9 L 758.8,373.9 L 775.2,371.0 L 791.6,375.5 L 808.0,377.9 L 824.4,374.7 L 840.8,384.4 L 857.2,391.1 L 873.6,396.4 L 890.0,392.8" fill="none" stroke="#1f77b4" stroke-width="2.5"/>
+<path d="M 316.0,77.7 L 332.4,96.4 L 348.8,104.1 L 365.2,123.5 L 381.6,139.5 L 398.0,147.5 L 414.4,166.8 L 430.8,184.9 L 447.2,193.2 L 463.6,206.0 L 480.0,213.1 L 496.4,224.2 L 512.8,240.1 L 529.2,240.8 L 545.6,253.4 L 562.0,257.4 L 578.4,255.8 L 594.8,260.9 L 611.2,271.2 L 627.6,275.7 L 644.0,280.7 L 660.4,291.3 L 676.8,287.7 L 693.2,295.5 L 709.6,303.8 L 726.0,309.9 L 742.4,313.8 L 758.8,304.6 L 775.2,310.2 L 791.6,307.5 L 808.0,320.3 L 824.4,320.0 L 840.8,326.2 L 857.2,327.8 L 873.6,337.4 L 890.0,329.3" fill="none" stroke="#d62728" stroke-width="2.5"/>
 <rect x="790" y="40" width="150" height="56" fill="white" stroke="#ccc"/>
 <line x1="800" y1="58" x2="830" y2="58" stroke="#1f77b4" stroke-width="2.5"/>
 <text x="840" y="62" font-size="12" fill="#333">train loss</text>
