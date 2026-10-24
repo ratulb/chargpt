@@ -556,7 +556,7 @@ def generate_text(
 
 
 def main() raises:
-    var h_params = CmdLineArgs(argv())
+    var h_params = HParams(argv())
     print("Hyper params: ", h_params)
     var text = TinyShakespeare.text()
     # We are training a character model - not a subword model

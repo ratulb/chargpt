@@ -266,7 +266,7 @@ struct Loss:
 def main() raises:
     # Settings come from key=value arguments; an unknown key or an unparsable
     # value is silently ignored, so check the "Hyper params" line below.
-    var h_params = CmdLineArgs(argv())
+    var h_params = HParams(argv())
     print("Hyper params: ", h_params)
     var text = TinyShakespeare.text()
     var tokenizer = CharTokenizer(text)

@@ -95,7 +95,6 @@ struct CmdLineArgs(ImplicitlyCopyable, Writable):
             if key_value[0] in arguments:
                 continue
             arguments[String(key_value[0])] = String(key_value[1])
-        print(arguments)
 
         # Step 2: for each field, use the command-line value if one was
         # given, otherwise the default. The pattern is the same every time:
