@@ -183,14 +183,13 @@ mojo chargpt.mojo batch_size=16 seq_length=32 max_iters=15000 n_embd=96 n_layer=
 | 15,000 | 1.65 | 1.82 |
 Each reading averages only 50 batches, so differences of a few hundredths between rows are noise. The gap of about 0.13 between train and validation is small but real: the model has begun to fit the training text a little better than the validation text.
 
-![Training and validation loss over 15,000 steps (zoomed to 1.5–2.0 nats)](loss_curve.svg)
-
-The first plot zooms into the region where train and validation are close, so the small but real gap is visible.
-
 ![Training and validation loss over 15,000 steps (log scale)](loss_curve_log.svg)
 
 The log-scale plot keeps the initial drop and the later gap in the same picture.
 
+![Training and validation loss over 15,000 steps (zoomed to 1.5–2.0 nats)](loss_curve.svg)
+
+The zoomed plot focuses on the region where train and validation are close, so the small but real gap is visible.
 ## Where the code is
 
 Everything below is in `chargpt.mojo`, in the order it appears. The file is commented so you can read it top to bottom.
