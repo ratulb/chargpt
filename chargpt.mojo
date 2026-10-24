@@ -18,9 +18,8 @@ from tenmo.adamw import AdamW
 from tenmo.dropout import Dropout
 from tenmo.net import GeLU
 from tenmo.layernorm import LayerNorm
-from shared import CmdLineArgs, TinyShakespeare, learning_rate
-
-comptime drop_ratio = 0.0
+from tenmo.shared.shapes import Shape
+from shared import CmdLineArgs, TinyShakespeare
 
 comptime INT = DType.int
 comptime INT64 = DType.int64
@@ -32,6 +31,7 @@ comptime HParams = CmdLineArgs
 struct CharPretokenizer(PreTokenizer):
     """Implment `PreTokenizer` trait from mbpe - to be used in conjunction with BPETokenizer.    Text would be token per unicode character codepoint.
     """
+
     comptime byte_map: ByteMapping = ByteMapping.SEQUENTIAL
 
     def __init__(out self):
@@ -114,6 +114,7 @@ struct Dataset:
 # (tril) hides future positions so token i attends only to tokens <= i.
 struct MultiHeadAttention:
     """Implement multi-head causal attention."""
+
     var n_head: Int
     var head_dim: Int
     var c_attn: Linear[F32]  # Fused QKV: n_embd -> 3*n_embd
@@ -121,17 +122,20 @@ struct MultiHeadAttention:
     var tril: Tensor[F32]
     var dropout: Dropout[F32]
     var inv_scale: Scalar[F32]  # Pre-calculated for scaling QK^
-    def __init__(out self, n_embd: Int, n_head: Int, seq_length: Int):
+
+    def __init__(
+        out self, n_embd: Int, n_head: Int, seq_length: Int, drop_ratio: Float32
+    ):
         self.n_head = n_head
         self.head_dim = n_embd // n_head
         self.c_attn = Linear[F32](
             in_features=n_embd,
             out_features=3 * n_embd,
-            init_method="normal",
+            init_method="kaiming",
             bias=False,
         )
         self.c_proj = Linear[F32](
-            in_features=n_embd, out_features=n_embd, init_method="normal"
+            in_features=n_embd, out_features=n_embd, init_method="kaiming"
         )
         self.tril = Tensor[F32].ones(seq_length, seq_length).tril()
         self.dropout = Dropout[F32](drop_ratio)
@@ -193,13 +197,14 @@ struct MLP:
     var gelu: GeLU[F32]
     var c_proj: Linear[F32]
     var dropout: Dropout[F32]
-    def __init__(out self, n_embd: Int):
+
+    def __init__(out self, n_embd: Int, drop_ratio: Float32):
         self.c_fc = Linear[F32](
-            in_features=n_embd, out_features=4 * n_embd, init_method="normal"
+            in_features=n_embd, out_features=4 * n_embd, init_method="kaiming"
         )
         self.gelu = GeLU[F32]()
         self.c_proj = Linear[F32](
-            in_features=4 * n_embd, out_features=n_embd, init_method="normal"
+            in_features=4 * n_embd, out_features=n_embd, init_method="kaiming"
         )
         self.dropout = Dropout[F32](drop_ratio)
 
@@ -235,13 +240,17 @@ struct Block:
     var attn: MultiHeadAttention
     var ln2: LayerNorm[F32]
     var mlp: MLP
+
     def __init__(out self, h_params: HParams):
         self.ln1 = LayerNorm[F32](h_params.n_embd)
         self.attn = MultiHeadAttention(
-            h_params.n_embd, h_params.n_head, h_params.seq_length
+            h_params.n_embd,
+            h_params.n_head,
+            h_params.seq_length,
+            h_params.drop_ratio,
         )
         self.ln2 = LayerNorm[F32](h_params.n_embd)
-        self.mlp = MLP(h_params.n_embd)
+        self.mlp = MLP(h_params.n_embd, h_params.drop_ratio)
 
     def __call__(mut self, x: Tensor[F32]) raises -> Tensor[F32]:
         var h = self.ln1(x)
@@ -275,6 +284,7 @@ struct Block:
 # Decoder-only GPT: token+position embeddings -> N blocks -> final LayerNorm -> lm_head.
 struct CharGPT:
     """The character based generative model."""
+
     var token_embedding_table: Embedding[F32]
     var position_embedding_table: Embedding[F32]
     var blocks: List[Block]
@@ -285,10 +295,10 @@ struct CharGPT:
 
     def __init__(out self, vocab_size: Int, h_params: HParams):
         self.token_embedding_table = Embedding[F32](
-            vocab_size, h_params.n_embd, init_method="normal"
+            vocab_size, h_params.n_embd, init_method="kaiming"
         )
         self.position_embedding_table = Embedding[F32](
-            h_params.seq_length, h_params.n_embd, init_method="normal"
+            h_params.seq_length, h_params.n_embd, init_method="kaiming"
         )
         self.blocks = List[Block](capacity=h_params.n_layer)
         for _ in range(h_params.n_layer):
@@ -297,7 +307,7 @@ struct CharGPT:
         self.lm_head = Linear[F32](
             in_features=h_params.n_embd,
             out_features=vocab_size,
-            init_method="normal",
+            init_method="kaiming",
         )
         self.criterion = CrossEntropyLoss[F32]()
         self.h_params = h_params
@@ -415,6 +425,94 @@ struct CharGPT:
         self.train()
         return appended^  # (B, T+max_new_tokens)
 
+    @staticmethod
+    def sample(
+        logits: Tensor[F32],
+        temperature: Float32 = 0.8,
+        top_k: Int = 50,
+        init_seed: Optional[Int] = None,
+    ) raises -> Int:
+        """Draw one token id from 1-D `logits` (V,).
+
+        - `temperature <= 0` or `top_k == 1` → greedy argmax (deterministic).
+        - Otherwise: keep the top-`k` entries (`0 < k < V`; `k <= 0` or `k >= V`
+          disables the mask), scale the survivors by `1/temp`, softmax, single
+          `multinomial` draw. `init_seed` pins the draw for reproducibility.
+
+        Note on ordering: scaling by a positive `1/temp` is strictly monotonic, so it
+        commutes with `argmax` and with top-k selection. We therefore select on the
+        raw logits and scale only the k survivors, avoiding a full-V scale pass.
+        """
+        var V = logits.numels()
+        if V == 0:
+            raise Error("sample: empty logits")
+
+        # -- Greedy shortcuts -------------------------------------------------
+        # temp <= 0 means "no randomness"; top_k == 1 means "only one candidate".
+        # In both cases the answer is the single highest logit, deterministically.
+        if temperature <= 0.0 or top_k == 1:
+            return Int(logits.argmax(axis=0).item())
+
+        # Precompute 1/temp once; used for every survivor below.
+        var inv_tau = Scalar[F32](1.0) / Scalar[F32](temperature)
+
+        # Softmax normalizes along the only axis of a 1-D tensor.
+        var axes = List[Int]()
+        axes.append(0)
+
+        var probs: Tensor[F32]
+
+        if top_k > 1 and top_k < V:
+            # ---- Top-k truncation --------------------------------------------
+            # Keep the k highest-scoring tokens, drop the rest by giving them
+            # probability 0. This kills the long tail of nonsensical tokens that
+            # temperature alone cannot suppress.
+
+            # Scratch copy used only for *selection*. Selection is order-preserving
+            # under positive scaling, so we work on the raw logits and overwrite
+            # each popped max with -inf so the next argmax finds the runner-up.
+            # O(top_k * V) total; fine for small k, swap for a real topk op if
+            # V or k grows.
+            var work = logits.clone()
+            var kept = List[Int](capacity=top_k)
+            var kept_values = List[Scalar[F32]](capacity=top_k)
+            for _ in range(top_k):
+                var m = Int(work.argmax(axis=0).item())
+                kept.append(m)
+                # Snapshot the *scaled* value now, while we still have it: work[m]
+                # is about to become -inf, and we do not want to re-read logits
+                # and re-divide later.
+                kept_values.append(work[m] * inv_tau)
+                work[m] = neg_inf[F32]()
+
+            # Build the masked logit vector: -inf everywhere, scaled survivors in
+            # their original positions. exp(-inf) == 0 in softmax, so masked
+            # entries get exactly zero probability.
+            #var masked = Tensor[F32].zeros(V) + neg_inf[F32]()
+            var masked = Tensor[F32].full(Shape(V), neg_inf[F32]())
+            for i in range(top_k):
+                masked[kept[i]] = kept_values[i]
+
+            probs = masked.softmax[track_grad=False](axes)
+        else:
+            # ---- No truncation -----------------------------------------------
+            # top_k <= 1 is handled above; top_k >= V means "keep everything".
+            # Scale in place (on a clone) so we never mutate the caller's tensor.
+            if temperature != 1.0:
+                var scaled = logits.clone() * inv_tau
+                probs = scaled.softmax[track_grad=False](axes)
+            else:
+                # temp == 1 is a no-op; skip the clone and softmax the input directly.
+                probs = logits.softmax[track_grad=False](axes)
+
+        # ---- Single draw ------------------------------------------------------
+        # Multinomial samples an index in [0, V) according to `probs`. Exactly one
+        # sample, so `replacement` is irrelevant here but kept for callers who
+        # later bump num_samples. `init_seed` makes the draw reproducible in tests.
+        var drawn = probs.multinomial(
+            num_samples=1, replacement=False, init_seed=init_seed
+        )
+        return Int(drawn.item())
 
 struct Loss:
     @staticmethod
@@ -445,8 +543,8 @@ def generate_text(
     max_new_tokens: Int,
 ) raises:
     model.eval()
-    # Get a random single batch from validation data with 5 char
-    var rand_batch = dataset.random_batch("val", 1, 5)
+    # Get a random single batch from validation data with 5 char sequence
+    var rand_batch = dataset.random_batch("val", 1, 5)  # tuple of tensors
     var rand_context = rand_batch[0]
     var generated = model.generate(
         rand_context, max_new_tokens=max_new_tokens, seed_range=seed_range
@@ -481,7 +579,7 @@ def main() raises:
 
     var optimizer = AdamW[F32](
         model.parameters(),
-        lr=Scalar[F32](learning_rate),
+        lr=Scalar[F32](h_params.learning_rate),
         # clip_norm=Scalar[F32](1),
         # clip_value=Scalar[F32](0.5),
     )

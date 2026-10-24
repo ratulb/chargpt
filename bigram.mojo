@@ -9,7 +9,7 @@ from tenmo.crossentropy import CrossEntropyLoss
 from std.random import random_ui64, seed
 from tenmo.adamw import AdamW
 
-from shared import CmdLineArgs, TinyShakespeare, learning_rate
+from shared import CmdLineArgs, TinyShakespeare
 
 comptime INT = DType.int
 comptime INT64 = DType.int64
@@ -118,13 +118,7 @@ struct Dataset:
         self.batch_size = h_params.batch_size
         self.seq_length = h_params.seq_length
 
-    def train_ds(ref self) -> ref[self.train_data] Tensor[INT]:
-        return self.train_data
-
-    def val_ds(ref self) -> ref[self.val_data] Tensor[INT]:
-        return self.val_data
-
-    def get_batch(
+    def random_batch(
         self, mode: String
     ) raises -> Tuple[Tensor[INT], Tensor[INT]]:
         ref data_src = self.train_data if mode == "train" else self.val_data
@@ -152,7 +146,7 @@ struct Loss:
         for mode in ["train", "val"]:
             var losses = Tensor[F32].zeros(eval_iters)
             for k in range(eval_iters):
-                var (x, y) = dataset.get_batch(mode)
+                var (x, y) = dataset.random_batch(mode)
                 var (_, loss) = model(x, y)
                 # loss.value() because loss is Optional
                 losses[k] = loss.value().item()
@@ -185,7 +179,7 @@ def main() raises:
 
     var optimizer = AdamW[F32](
         model.parameters(),
-        lr=Scalar[F32](learning_rate),
+        lr=Scalar[F32](h_params.learning_rate),
     )
 
     for iter in range(h_params.max_iters):
@@ -198,7 +192,7 @@ def main() raises:
                 )
             )
 
-        var (xb, yb) = dataset.get_batch("train")
+        var (xb, yb) = dataset.random_batch("train")
         var output = model(xb, yb)
         ref _logits = output[0]
         ref loss = output[1]

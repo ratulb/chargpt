@@ -2,16 +2,14 @@ from std.pathlib import Path
 from std.os.process import Process
 from std.sys import argv
 
-from std.math import sqrt
+#from std.math import sqrt
 
 comptime download_url = "https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt"
 comptime input_file = "/tmp/input.txt"
 
-comptime INT = DType.int
-comptime INT64 = DType.int64
-comptime F32 = DType.float32
-
-comptime learning_rate = 1e-3
+#comptime INT = DType.int
+#comptime INT64 = DType.int64
+#comptime F32 = DType.float32
 
 @fieldwise_init
 struct CmdLineArgs(ImplicitlyCopyable, Writable):
@@ -26,6 +24,8 @@ struct CmdLineArgs(ImplicitlyCopyable, Writable):
     var n_layer: Int
     var seed_range: UInt64
     var gen_interval: Int
+    var learning_rate: Float32
+    var drop_ratio: Float32
 
     def __init__(
         out self,
@@ -41,6 +41,8 @@ struct CmdLineArgs(ImplicitlyCopyable, Writable):
         n_layer: Int = 6,
         seed_range: UInt64 = 1000000,
         gen_interval: Int = 500,
+        learning_rate: Float32 = 1e-3,
+        drop_ratio: Float32 = 0.1,
     ) raises:
         var first = True
         var arguments = Dict[String, String]()
@@ -55,62 +57,73 @@ struct CmdLineArgs(ImplicitlyCopyable, Writable):
         print(arguments)
 
         self.batch_size = (
-            Self.to_integer(arguments["batch_size"], batch_size) if "batch_size"
+            Self.to_dtype(arguments["batch_size"], batch_size) if "batch_size"
             in arguments else batch_size
         )
         self.seq_length = (
-            Self.to_integer(arguments["seq_length"], seq_length) if "seq_length"
+            Self.to_dtype(arguments["seq_length"], seq_length) if "seq_length"
             in arguments else seq_length
         )
         self.eval_iters = (
-            Self.to_integer(arguments["eval_iters"], eval_iters) if "eval_iters"
+            Self.to_dtype(arguments["eval_iters"], eval_iters) if "eval_iters"
             in arguments else eval_iters
         )
         self.eval_interval = (
-            Self.to_integer(
+            Self.to_dtype(
                 arguments["eval_interval"], eval_interval
             ) if "eval_interval"
             in arguments else eval_interval
         )
         self.max_iters = (
-            Self.to_integer(arguments["max_iters"], max_iters) if "max_iters"
+            Self.to_dtype(arguments["max_iters"], max_iters) if "max_iters"
             in arguments else max_iters
         )
 
         self.max_new_tokens = (
-            Self.to_integer(
+            Self.to_dtype(
                 arguments["max_new_tokens"], max_new_tokens
             ) if "max_new_tokens"
             in arguments else max_new_tokens
         )
         self.n_embd = (
-            Self.to_integer(arguments["n_embd"], n_embd) if "n_embd"
+            Self.to_dtype(arguments["n_embd"], n_embd) if "n_embd"
             in arguments else n_embd
         )
 
         self.n_head = (
-            Self.to_integer(arguments["n_head"], n_head) if "n_head"
+            Self.to_dtype(arguments["n_head"], n_head) if "n_head"
             in arguments else n_head
         )
         self.n_layer = (
-            Self.to_integer(arguments["n_layer"], n_layer) if "n_layer"
+            Self.to_dtype(arguments["n_layer"], n_layer) if "n_layer"
             in arguments else n_layer
         )
         self.seed_range = (
             UInt64(
-                Self.to_integer(arguments["seed_range"], Int(seed_range))
+                Self.to_dtype(arguments["seed_range"], Int(seed_range))
             ) if "seed_range"
             in arguments else seed_range
         )
         self.gen_interval = (
-            Self.to_integer(arguments["gen_interval"], gen_interval) if "gen_interval"
+            Self.to_dtype(arguments["gen_interval"], gen_interval) if "gen_interval"
             in arguments else gen_interval
+        )
+        self.learning_rate = (
+            Self.to_dtype(arguments["learning_rate"], learning_rate) if "learning_rate"
+            in arguments else learning_rate
+        )
+        self.drop_ratio = (
+            Self.to_dtype(arguments["drop_ratio"], drop_ratio) if "drop_ratio"
+            in arguments else drop_ratio
         )
 
     @staticmethod
-    def to_integer(s: String, value: Int) -> Int:
+    def to_dtype[dtype: DType, //](s: String, value: Scalar[dtype]) -> Scalar[dtype]:
         try:
-            return Int(s)
+            comptime if dtype == DType.int:
+                return Scalar[dtype](Int(s))
+            else:
+                return Scalar[dtype](Float64(s))
         except:
             return value
 
