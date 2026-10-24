@@ -189,7 +189,9 @@ The first plot zooms into the region where train and validation are close, so th
 
 ![Training and validation loss over 15,000 steps (log scale)](loss_curve_log.svg)
 
-The log-scale plot keeps the initial drop and the later gap in the same picture.## Where the code is
+The log-scale plot keeps the initial drop and the later gap in the same picture.
+
+## Where the code is
 
 Everything below is in `chargpt.mojo`, in the order it appears. The file is commented so you can read it top to bottom.
 
