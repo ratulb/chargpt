@@ -2,7 +2,7 @@
 
 A small character-level GPT in [Mojo](https://www.modular.com/mojo), built step by step on CPU. It trains on Tiny Shakespeare and writes Shakespeare-shaped text, one character at a time.
 
-It is built on two libraries of mine:
+It is built on two libraries:
 
 - [**Tenmo**](https://github.com/ratulb/tenmo): tensors, autograd, layers and the AdamW optimizer.
 - [**mbpe**](https://github.com/ratulb/mbpe): the tokenizer. The character-level behaviour comes from a single small class, `CharPretokenizer`, described [below](#how-it-uses-mbpe).
