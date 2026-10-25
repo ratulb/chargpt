@@ -571,10 +571,10 @@ struct CharGPT:
             var window = List[Scalar[INT]](capacity=T)
             for i in range(total - T, total):
                 window.append(Scalar[INT](ids[i]))
-            var batch = Tensor[INT].from_list[INT](window^)
-            var flat = batch.reshape(1, T)
 
-            var (logits, _) = self(flat)  # (1, T, V), grad-free under eval()
+            var (logits, _) = self(
+                Tensor[INT].d2([window^])
+            )  # (1, T, V), grad-free under eval()
             var V = logits.shape()[2]
             var last = logits[Slicer(), -1, Slicer()]  # (1, V)
             var last_1d = last.reshape(V)
