@@ -744,7 +744,7 @@ def generate_text(
         top_k=top_k,
         init_seed=init_seed,
     )
-    # Row 0 of the (1, T+max_new_tokens) result, turned back into text.
+    # Row 0 of the (T+max_new_tokens) result, turned back into text.
     var tokens = generated.tolist()
     var text = tokenizer.decode(tokens)
     print(text)
