@@ -37,7 +37,6 @@ struct CmdLineArgs(ImplicitlyCopyable, Writable):
     n_embd           width of every vector inside the model
     n_head           attention heads (n_embd must divide evenly by it)
     n_layer          number of transformer blocks
-    seed_range       upper bound for the random seeds used when sampling
     learning_rate    AdamW step size
     drop_ratio       dropout probability (0.0 = off)
 
@@ -55,7 +54,6 @@ struct CmdLineArgs(ImplicitlyCopyable, Writable):
     var n_embd: Int
     var n_head: Int
     var n_layer: Int
-    var seed_range: UInt64
     var learning_rate: Float32
     var drop_ratio: Float32
 
@@ -64,16 +62,15 @@ struct CmdLineArgs(ImplicitlyCopyable, Writable):
         args: Span[StringSpan[ImmStaticOrigin], ImmStaticOrigin],
         # The defaults. Each one is used when its key is absent from `args`
         # (or when its value cannot be parsed, see `to_dtype`).
-        batch_size: Int = 32,
+        batch_size: Int = 16,
         seq_length: Int = 32,
         eval_iters: Int = 50,
         eval_interval: Int = 300,
-        max_iters: Int = 10000,
+        max_iters: Int = 5000,
         max_new_tokens: Int = 500,
         n_embd: Int = 192,
         n_head: Int = 6,
         n_layer: Int = 6,
-        seed_range: UInt64 = 1000000,
         learning_rate: Float32 = 1e-3,
         drop_ratio: Float32 = 0.1,
     ) raises:
@@ -143,13 +140,6 @@ struct CmdLineArgs(ImplicitlyCopyable, Writable):
         self.n_layer = (
             Self.to_dtype(arguments["n_layer"], n_layer) if "n_layer"
             in arguments else n_layer
-        )
-        # seed_range is unsigned 64-bit: parse it as an Int, convert after.
-        self.seed_range = (
-            UInt64(
-                Self.to_dtype(arguments["seed_range"], Int(seed_range))
-            ) if "seed_range"
-            in arguments else seed_range
         )
         self.learning_rate = (
             Self.to_dtype(

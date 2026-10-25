@@ -39,7 +39,6 @@ from tenmo.shared.indexhelper import i as Indexer, s as Slicer
 from tenmo.net import Linear
 from tenmo.embedding import Embedding
 from tenmo.crossentropy import CrossEntropyLoss
-from std.random import random_ui64, seed
 from tenmo.adamw import AdamW
 from tenmo.dropout import Dropout
 from tenmo.net import GeLU
@@ -514,47 +513,94 @@ struct CharGPT:
         mut self,
         indices: Tensor[INT],
         max_new_tokens: Int,
-        seed_range: UInt64,  # multinomial sets seed at `42` if not provided!
+        temperature: Float32 = 0.8,
+        top_k: Int = 50,
+        end_id: Int = -1,
+        init_seed: Optional[Int] = None,
     ) raises -> Tensor[INT]:
-        # Autoregressive decoding: append one sampled token at a time.
+        """Uncached autoregressive generation: prompt + up to `max_new_tokens`.
+
+        Each step runs the full model over the last-`seq_length` window, samples
+        the final position, appends. Stops early on `end_id` (>= 0).
+
+        Seeding:
+        - `init_seed == None` → every step passes `None` to `sample`, so each
+          step (and each whole run) draws fresh entropy. Non-reproducible; the
+          default.
+        - `init_seed == Some(s)` → step `m` uses seed `s + m`, so a whole run is
+          reproducible while each step's Gumbel noise is independent. `s + m`
+          must not overflow `Int` (i.e. `s + max_new_tokens` must fit).
+
+        Returns the id stream with the prompt prefix intact.
+        """
+        if indices.numels() == 0:
+            raise Error("generate: empty prompt")
+        if max_new_tokens <= 0:
+            raise Error("generate: max_new_tokens must be >= 1")
+
         # eval() switches dropout off; train() at the end switches it back.
         # Forgetting that last call leaves training silently running in eval
-        # mode after the first sample - this was hard lesson.
-        # Forgot to set train() back and loss went thru the roof
+        # mode after the first sample - this was a hard lesson. Forgot to set
+        # train() back and loss went thru the roof.
         self.eval()
-        # indices (B, T) from current context
-        var appended = indices.clone()
-        seed()
-        for _ in range(max_new_tokens):
+
+        # Copy the prompt ids into a growable list, validating as we go. On
+        # the error path we must restore train() before raising, or the
+        # caller's model is left in eval mode.
+        var ids = List[Int](capacity=indices.numels() + max_new_tokens)
+        for i in range(indices.numels()):
+            var v = Int(indices.get(i))
+            if v < 0:
+                self.train()
+                raise Error("generate: negative prompt id")
+            ids.append(v)
+
+        # `base_seed` is only read when `have_seed` is true; the `else 0` is a
+        # placeholder so the variable is always initialized.
+        var base_seed = init_seed.value() if init_seed else 0
+        var have_seed = init_seed != None
+
+        var made = 0
+        while made < max_new_tokens:
+            var total = len(ids)
             # Position embeddings only have `seq_length` rows, so the model
             # cannot accept a context longer than seq_length. Crop the growing
-            # generated sequence to its last seq_length tokens (like
-            # idx[:, -seq_length:] in nanoGPT) before each forward pass.
-            var T = appended.shape()[1]
-            var idx_cond: Tensor[INT]
-            if T <= self.h_params.seq_length:
-                idx_cond = appended.clone()
-            else:
-                var start = T - self.h_params.seq_length
-                idx_cond = appended[Slicer(), Slicer(start, None, None)]
-            var (logits, _) = self(idx_cond)
-            # Take logits for the last position -> (B, vocab_size).
-            logits = logits[Slicer(), -1, Slicer()]
-            # Convert to probabilities and sample next token id.
-            # Sampling (not picking the most likely character) is what keeps
-            # the text varied. This is the place where temperature and top-k
-            # would act: both reshape these probabilities before the draw.
-            var probas = logits.softmax[track_grad=False](axes=[-1])
-            # next_id's shape (B, 1)
-            var next_id = probas.multinomial[index_dtype=INT](
-                init_seed=Int(random_ui64(0, seed_range))
+            # sequence to its last seq_length ids (like idx[:, -seq_length:]
+            # in nanoGPT) before each forward pass.
+            var T = min(total, self.h_params.seq_length)
+            var window = List[Scalar[INT]](capacity=T)
+            for i in range(total - T, total):
+                window.append(Scalar[INT](ids[i]))
+            var batch = Tensor[INT].from_list[INT](window^)
+            var flat = batch.reshape(1, T)
+
+            var (logits, _) = self(flat)  # (1, T, V), grad-free under eval()
+            var V = logits.shape()[2]
+            var last = logits[Slicer(), -1, Slicer()]  # (1, V)
+            var last_1d = last.reshape(V)
+
+            # Seeded run: step m uses `base_seed + m` so each step's Gumbel
+            # noise is independent while the whole run stays reproducible.
+            # Unseeded run: pass None through, so `multinomial` draws fresh
+            # entropy per step.
+            var step_seed = Optional[Int](None)
+            if have_seed:
+                step_seed = Optional[Int](base_seed + made)
+            var next_id = Self.sample(
+                last_1d, temperature, top_k, init_seed=step_seed
             )
-            # Append sampled token to the running sequence.
-            appended = Tensor[INT].concat[track_grad=False](
-                [appended, next_id], axis=1
-            )
+
+            ids.append(next_id)
+            made += 1
+            if end_id >= 0 and next_id == end_id:
+                break
+
         self.train()
-        return appended^  # (B, T+max_new_tokens)
+
+        var out = List[Scalar[INT]](capacity=len(ids))
+        for i in range(len(ids)):
+            out.append(Scalar[INT](ids[i]))
+        return Tensor[INT].from_list[INT](out^)
 
     @staticmethod
     def sample(
@@ -567,25 +613,29 @@ struct CharGPT:
 
         - `temperature <= 0` or `top_k == 1` → greedy argmax (deterministic).
         - Otherwise: keep the top-`k` entries (`0 < k < V`; `k <= 0` or `k >= V`
-          disables the mask), scale the survivors by `1/temp`, softmax, single
-          `multinomial` draw. `init_seed` pins the draw for reproducibility.
+          disables the mask), scale the survivors by `1/temperature`, softmax,
+          single `multinomial` draw.
 
-        Note on ordering: scaling by a positive `1/temp` is strictly monotonic, so it
-        commutes with `argmax` and with top-k selection. We therefore select on the
-        raw logits and scale only the k survivors, avoiding a full-V scale pass.
+        Seeding:
+        - `init_seed == None` → `multinomial` draws fresh entropy per call, so
+          repeated calls are (almost surely) different. This is the default.
+        - `init_seed != None` → the draw is reproducible for a given `s`.
+
+        Scaling by positive `1/temperature` is monotonic, so it commutes with
+        top-k selection: we select on raw logits and scale only the survivors.
         """
         var V = logits.numels()
         if V == 0:
             raise Error("sample: empty logits")
 
-        # -- Greedy shortcuts -------------------------------------------------
-        # temp <= 0 means "no randomness"; top_k == 1 means "only one candidate".
-        # In both cases the answer is the single highest logit, deterministically.
+        # temperature <= 0 means "no randomness"; top_k == 1 means "only one
+        # candidate".
         if temperature <= 0.0 or top_k == 1:
             return Int(logits.argmax(axis=0).item())
 
-        # Precompute 1/temp once; used for every survivor below.
-        var inv_tau = Scalar[F32](1.0) / Scalar[F32](temperature)
+        # Precompute 1/temperature once; applied only to survivors (or to all
+        # V when truncation is disabled).
+        var inv_temp = Scalar[F32](1.0) / Scalar[F32](temperature)
 
         # Softmax normalizes along the only axis of a 1-D tensor.
         var axes = List[Int]()
@@ -594,52 +644,43 @@ struct CharGPT:
         var probs: Tensor[F32]
 
         if top_k > 1 and top_k < V:
-            # ---- Top-k truncation --------------------------------------------
-            # Keep the k highest-scoring tokens, drop the rest by giving them
-            # probability 0. This kills the long tail of nonsensical tokens that
-            # temperature alone cannot suppress.
-
-            # Scratch copy used only for *selection*. Selection is order-preserving
-            # under positive scaling, so we work on the raw logits and overwrite
-            # each popped max with -inf so the next argmax finds the runner-up.
-            # O(top_k * V) total; fine for small k, swap for a real topk op if
-            # V or k grows.
+            # Manual selection: repeatedly take the current max and mask it
+            # with -inf so the next argmax finds the runner-up. O(top_k * V)
+            # total. At k=50, V=256 that is ~12.8k comparisons — negligible.
+            # If V or k grows, swap this for a min-heap (O(V log k)) or
+            # quickselect (O(V) avg). Selection runs on raw logits (see
+            # docstring) and we snapshot the *scaled* value at pick time, so
+            # logits is never re-read and no full-V division pass is needed.
             var work = logits.clone()
             var kept = List[Int](capacity=top_k)
             var kept_values = List[Scalar[F32]](capacity=top_k)
             for _ in range(top_k):
                 var m = Int(work.argmax(axis=0).item())
                 kept.append(m)
-                # Snapshot the *scaled* value now, while we still have it: work[m]
-                # is about to become -inf, and we do not want to re-read logits
-                # and re-divide later.
-                kept_values.append(work[m] * inv_tau)
+                kept_values.append(work[m] * inv_temp)
                 work[m] = neg_inf[F32]()
 
-            # Build the masked logit vector: -inf everywhere, scaled survivors in
-            # their original positions. exp(-inf) == 0 in softmax, so masked
-            # entries get exactly zero probability.
-            # var masked = Tensor[F32].zeros(V) + neg_inf[F32]()
+            # Build the masked logit vector: -inf everywhere, scaled survivors
+            # in their original positions. exp(-inf) == 0, so softmax gives
+            # the masked entries exactly zero probability.
             var masked = Tensor[F32].full(Shape(V), neg_inf[F32]())
             for i in range(top_k):
                 masked[kept[i]] = kept_values[i]
 
             probs = masked.softmax[track_grad=False](axes)
         else:
-            # ---- No truncation -----------------------------------------------
             # top_k <= 1 is handled above; top_k >= V means "keep everything".
-            # Scale in place (on a clone) so we never mutate the caller's tensor.
             if temperature != 1.0:
-                var scaled = logits.clone() * inv_tau
+                var scaled = logits.clone() * inv_temp
                 probs = scaled.softmax[track_grad=False](axes)
             else:
-                # temp == 1 is a no-op; skip the clone and softmax the input directly.
+                # temperature == 1 is a no-op; skip the clone and softmax the
+                # input directly.
                 probs = logits.softmax[track_grad=False](axes)
 
-        # ---- Single draw ------------------------------------------------------
-        # Multinomial samples an index in [0, V) according to `probs`. Exactly one
-        # sample, so `replacement` is irrelevant here but kept for callers who
-        # later bump num_samples. `init_seed` makes the draw reproducible in tests.
+        # One sample, so `replacement` is inert here; kept for callers who
+        # later bump num_samples. `init_seed == None` → fresh entropy inside
+        # `multinomial`; `init_seed != None` → reproducible draw.
         var drawn = probs.multinomial(
             num_samples=1, replacement=False, init_seed=init_seed
         )
@@ -680,8 +721,10 @@ def generate_text(
     tokenizer: BPETokenizer[_],
     mut model: CharGPT,
     dataset: Dataset,
-    seed_range: UInt64,
     max_new_tokens: Int,
+    temperature: Float32 = 0.8,
+    top_k: Int = 50,
+    init_seed: Optional[Int] = None,
 ) raises:
     """
     Show what the model has learned so far.
@@ -695,10 +738,14 @@ def generate_text(
     var rand_batch = dataset.random_batch("val", 1, 5)  # tuple of tensors
     var rand_context = rand_batch[0]
     var generated = model.generate(
-        rand_context, max_new_tokens=max_new_tokens, seed_range=seed_range
+        rand_context,
+        max_new_tokens=max_new_tokens,
+        temperature=temperature,
+        top_k=top_k,
+        init_seed=init_seed,
     )
     # Row 0 of the (1, T+max_new_tokens) result, turned back into text.
-    var tokens = generated[Indexer(0), Slicer()].tolist()
+    var tokens = generated.tolist()
     var text = tokenizer.decode(tokens)
     print(text)
     model.train()
@@ -754,7 +801,6 @@ def main() raises:
         tokenizer,
         model,
         dataset,
-        h_params.seed_range,
         h_params.max_new_tokens,
     )
 
@@ -775,7 +821,6 @@ def main() raises:
                 tokenizer,
                 model,
                 dataset,
-                h_params.seed_range,
                 h_params.max_new_tokens,
             )
 
@@ -794,5 +839,8 @@ def main() raises:
     model.eval()
     # A final sample from the trained model.
     generate_text(
-        tokenizer, model, dataset, h_params.seed_range, h_params.max_new_tokens
+        tokenizer,
+        model,
+        dataset,
+        h_params.max_new_tokens,
     )
