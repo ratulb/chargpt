@@ -330,8 +330,8 @@ def main() raises:
         loss_inner.backward()  # how should each weight change to lower loss?
         optimizer.step()  # nudge every weight a little in that direction
 
-        # Print a sample every `gen_interval` steps, to watch the text improve.
-        if (iter + 1) % h_params.gen_interval == 0:
+        # Print a sample every `eval_interval` steps, to watch the text improve.
+        if (iter + 1) % h_params.eval_interval == 0:
             print(
                 tokenizer.decode(
                     model.generate(

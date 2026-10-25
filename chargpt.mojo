@@ -108,7 +108,7 @@ struct Dataset:
     Dataset: turning one long id sequence into training examples
     The whole text is one long list of ids. A training example is a random
     window of `seq_length` ids (x) and the same window shifted one place to the
-    right (y). So at every position, y holds the character that follows:
+    right (y). So at every position, y holds the character that follows.
 
     text:  T  o  _  b  e  _  o  r
     x:     T  o  _  b  e            (what the model sees)
@@ -341,7 +341,7 @@ struct Block:
     came in (a residual connection). The residual gives gradients a direct path
     back through a deep stack, and lets each block make a small correction to
     the running representation rather than rebuild it.
-    x -> LayerNorm -> attention -> (+ x) -> LayerNorm -> MLP -> (+ itself)
+    x -> LayerNorm -> attention -> (+ x) -> LayerNorm -> MLP -> (+ itself).
 
     """
 
@@ -394,7 +394,7 @@ struct CharGPT:
     """
     CharGPT: the whole model
     ids (B, T) -> token + position embeddings -> n_layer blocks -> LayerNorm
-         -> linear head -> logits (B, T, V)
+         -> linear head -> logits (B, T, V).
 
     A logit is an unnormalised score. logits[b, t, :] holds one score for each
     of the V possible next characters, given everything up to position t.
@@ -684,7 +684,7 @@ def generate_text(
     max_new_tokens: Int,
 ) raises:
     """
-    generate_text: show what the model has learned so far
+    Show what the model has learned so far.
     The starting prompt is 5 consecutive characters from a random place in the
     validation text, which the model never trains on, so the sample is not
     something it could simply be repeating from memory.
@@ -738,9 +738,11 @@ def main() raises:
         # clip_value=Scalar[F32](0.5),
     )
     model.train()
-    # Before any training: a model that knows nothing should score about
-    # ln(256) = 5.55. If this line is far from that, something is wrong.
-    # We get 6~7 - that is mistry that needs to be explained
+    # Before any training: every weight uses Kaiming (He) init, which keeps
+    # the initial logits at roughly unit variance. Cross-entropy of random
+    # logits is ln(256) ≈ 5.55 plus an overconfidence penalty, so ~6.6 is
+    # expected here, not 5.55 (that would need near-zero logits). A value far
+    # from ~6.6 would indicate a broken init or forward pass.
     var losses = Loss.estimate(model, dataset, h_params.eval_iters)
     print(
         "Starting: train loss {0}, val loss {1}".format(

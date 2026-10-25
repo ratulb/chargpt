@@ -38,7 +38,6 @@ struct CmdLineArgs(ImplicitlyCopyable, Writable):
     n_head           attention heads (n_embd must divide evenly by it)
     n_layer          number of transformer blocks
     seed_range       upper bound for the random seeds used when sampling
-    gen_interval     steps between samples
     learning_rate    AdamW step size
     drop_ratio       dropout probability (0.0 = off)
 
@@ -57,7 +56,6 @@ struct CmdLineArgs(ImplicitlyCopyable, Writable):
     var n_head: Int
     var n_layer: Int
     var seed_range: UInt64
-    var gen_interval: Int
     var learning_rate: Float32
     var drop_ratio: Float32
 
@@ -76,7 +74,6 @@ struct CmdLineArgs(ImplicitlyCopyable, Writable):
         n_head: Int = 6,
         n_layer: Int = 6,
         seed_range: UInt64 = 1000000,
-        gen_interval: Int = 500,
         learning_rate: Float32 = 1e-3,
         drop_ratio: Float32 = 0.1,
     ) raises:
@@ -153,12 +150,6 @@ struct CmdLineArgs(ImplicitlyCopyable, Writable):
                 Self.to_dtype(arguments["seed_range"], Int(seed_range))
             ) if "seed_range"
             in arguments else seed_range
-        )
-        self.gen_interval = (
-            Self.to_dtype(
-                arguments["gen_interval"], gen_interval
-            ) if "gen_interval"
-            in arguments else gen_interval
         )
         self.learning_rate = (
             Self.to_dtype(

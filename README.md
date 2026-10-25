@@ -18,7 +18,7 @@ The project is meant to be read in order. Each stage adds one idea to the one be
 | 1 | `bigram.mojo` | The baseline: predict the next character from the current one alone, with no context |
 | 2 | `chargpt.mojo` | A transformer: position embeddings, causal attention, MLP blocks, residuals and layer norm |
 
-Ideas beyond that, not yet started: a learning-rate schedule and gradient clipping, saving and loading checkpoints with a separate `generate` command, dropout as a command-line argument, and a word-level pre-tokenizer to compare subword tokens against characters. See [Where it goes next](#where-it-goes-next).
+Ideas beyond that, not yet started: a learning-rate schedule and gradient clipping, saving and loading checkpoints with a separate `generate` command, and a word-level pre-tokenizer to compare subword tokens against characters. (Dropout is already a command-line argument via `drop_ratio`.) See [Where it goes next](#where-it-goes-next).
 
 ## What it looks like
 
@@ -119,10 +119,11 @@ Every setting below can be overridden as `key=value`. They are runtime arguments
 | `eval_interval` | 300 | Steps between evaluations and samples |
 | `eval_iters` | 50 | Batches averaged per evaluation. Raise it for steadier numbers |
 | `max_new_tokens` | 500 | Length of each sample |
-| `gen_interval` | 500 | Steps between generated samples |
 | `seed_range` | 1000000 | Each sampled character draws its randomness from a seed in `[0, seed_range]`. Keep it large; a small range limits how varied the samples can be |
+| `learning_rate` | 1e-3 | AdamW step size |
+| `drop_ratio` | 0.1 | Dropout probability (0.0 = off) |
 
-Two settings are still compile-time constants, so changing them means recompiling: `learning_rate` (1e-3, in `shared.mojo`) and `drop_ratio` (0.0, at the top of `chargpt.mojo`).
+All of these are runtime arguments: changing any of them is just another `key=value` on the command line, with no recompile. (Nothing here is a compile-time constant anymore.)
 
 Things to know about the arguments:
 
@@ -147,7 +148,7 @@ A bigram model on this text typically lands near 2.5 nats (Karpathy reports abou
 
 ### The starting loss
 
-Before the first step the script prints a starting loss and a sample of pure noise. With the default settings that loss is about 40.2 (measured: 40.24 train, 40.24 val), far above ln 256 ≈ 5.55, because the weights are initialized from a standard normal with standard deviation 1. That makes the initial logits large, and cross-entropy then penalizes confidently wrong predictions. This is expected: the optimizer pulls the weights down during the first few hundred steps, and by step 300 the loss is already around 3.43 (train) / 3.51 (val). For the 96-wide run in the Results table the starting loss was 27.87 (train) / 27.93 (val). If you want a starting loss near 5.55 you can switch `init_method` from `"normal"` to an Xavier/He initializer; that is not the default here so that the training curves above stay comparable.
+Before the first step the script prints a starting loss and a sample of pure noise. With the default settings that loss is about 6.6 (measured: 6.59 train, 6.58 val), above ln 256 ≈ 5.55, because every weight uses Kaiming (He) initialization, which keeps the initial logits at roughly unit variance. Cross-entropy of random logits is ln V plus an overconfidence penalty that grows with that variance; ln 256 ≈ 5.55 would require near-zero logits. This is expected and healthy: the optimizer pulls the weights down during the first few hundred steps, and by step 300 the loss is already around 3.43 (train) / 3.51 (val). The same ~6.6 starting loss applies to the 96-wide run. If you want a starting loss near 5.55 you can switch `init_method` from `"kaiming"` to a much smaller (or zero) initializer; that is not the default here so that the training curves above stay comparable.
 
 ## Results
 
@@ -235,7 +236,7 @@ Planned, in order:
 
 Ideas, not yet started:
 
-2. **A better training recipe.** A learning-rate schedule (a short warmup, then decay), gradient clipping, and dropout as a command-line argument.
+2. **A better training recipe.** A learning-rate schedule (a short warmup, then decay) and gradient clipping. (Dropout is already a command-line argument via `drop_ratio`.)
 3. **Checkpoints.** Save the trained weights, and add a separate `generate` command so a sample does not need a retrain.
 4. **A word-level pre-tokenizer.** Compare characters against subword tokens on the same model.
 5. **A GPU path.** A small, separate file, so the main code stays uncluttered.
@@ -247,7 +248,7 @@ Predict first, then run.
 1. **Context.** Run with `seq_length=8`, then `32`, then `128`. What happens to the loss and to the text? Context costs little compute at this width.
 2. **Overfit one batch.** Train on a single fixed batch. The loss should fall close to zero, which proves the plumbing works.
 3. **Width and heads.** Keep `n_embd` fixed and change `n_head`. Fewer, wider heads against more, narrower ones: which does the loss prefer?
-4. **Dropout.** Change `drop_ratio` from 0.0 to 0.1 (this needs a recompile) and train for about 9 passes. Does the gap between train and validation loss change?
+4. **Dropout.** Change `drop_ratio` from 0.1 to 0.0 (or the other way) on the command line, with no recompile, and train for about 9 passes. Does the gap between train and validation loss change?
 5. **Position embeddings.** Remove them. Can the model still use word order?
 6. **The mask.** Remove the causal mask in `MultiHeadAttention`. Training loss will fall too well, because the model can read the answer; generation will not work. Why?
 7. **The pre-tokenizer.** Swap `CharPretokenizer` for a word-splitting one and train to a larger vocabulary.
