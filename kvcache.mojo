@@ -1,6 +1,6 @@
 from tenmo.tensor import Tensor
-from std.testing import assert_true
-from tenmo.shared.indexhelper import i, s
+from std.testing import assert_true, assert_raises
+from tenmo.shared.indexhelper import i, s, e
 
 
 struct KVCache[dtype: DType]:
@@ -43,10 +43,8 @@ struct KVCache[dtype: DType]:
         assert_true(self.length + T_new <= self.capacity)  # room to write
 
         # fill(dest_slices..., src): copy `k_new` into keys[:, :, lo:hi, :].
-        self.keys.fill(k_new, s(), s(), s(self.length, self.length + T_new), s())
-        self.values.fill(
-            v_new, s(), s(), s(self.length, self.length + T_new), s()
-        )
+        self.keys.fill(k_new, e(), s(self.length, self.length + T_new), s())
+        self.values.fill(v_new, e(), s(self.length, self.length + T_new), s())
         self.length += T_new
 
     def get(self) raises -> Tuple[Tensor[Self.dtype], Tensor[Self.dtype]]:
@@ -59,10 +57,9 @@ struct KVCache[dtype: DType]:
         """
         assert_true(self.length > 0)
         return (
-            self.keys[s(), s(), s(0, self.length), s()],
-            self.values[s(), s(), s(0, self.length), s()],
+            self.keys[e(), s(0, self.length), s()],
+            self.values[e(), s(0, self.length), s()],
         )
-
 
     def evict_oldest(mut self, n: Int = 1) raises:
         """Drop the n oldest positions and shift the rest down.
@@ -78,10 +75,10 @@ struct KVCache[dtype: DType]:
         # Source [n:length] and destination [0:remaining] overlap when
         # n < length. Clone the source before filling; otherwise the write
         # clobbers slots the read hasn't reached yet.
-        var k_src = self.keys[s(), s(), s(n, self.length), s()].clone()
-        var v_src = self.values[s(), s(), s(n, self.length), s()].clone()
-        self.keys.fill(k_src, s(), s(), s(0, remaining), s())
-        self.values.fill(v_src, s(), s(), s(0, remaining), s())
+        var k_src = self.keys[e(), s(n, self.length), s()].clone()
+        var v_src = self.values[e(), s(n, self.length), s()].clone()
+        self.keys.fill(k_src^, e(), s(0, remaining), s())
+        self.values.fill(v_src^, e(), s(0, remaining), s())
         self.length = remaining
 
 
@@ -92,7 +89,7 @@ def main() raises:
     test_append_happy_path()
     test_append_fills_cache()
     test_append_refuses_overflow()
-    #test_get_returns_live_prefix()
+    # test_get_returns_live_prefix()
     test_get_returns_view()
     test_evict_oldest_shifts()
     test_evict_oldest_multiple()
@@ -101,6 +98,7 @@ def main() raises:
 
 
 # ---- helpers ---------------------------------------------------------------
+
 
 def make_cache() -> KVCache[F32]:
     # B=1, n_head=2, capacity=4, head_dim=2
@@ -122,9 +120,7 @@ def fill_with_range(start: Float32, T_new: Int) -> Tensor[F32]:
     return t^
 
 
-def all_equal(
-    t: Tensor[F32], value: Float32, lo: Int, hi: Int
-) -> Bool:
+def all_equal(t: Tensor[F32], value: Float32, lo: Int, hi: Int) -> Bool:
     for h in range(2):
         for p in range(lo, hi):
             for d in range(2):
@@ -134,6 +130,7 @@ def all_equal(
 
 
 # ---- tests -----------------------------------------------------------------
+
 
 def test_append_happy_path() raises:
     var cache = make_cache()
@@ -170,7 +167,8 @@ def test_append_refuses_overflow() raises:
     cache.append(fill_with(2.0, 2), fill_with(12.0, 2))
     assert_true(cache.length == 4)
     # Uncomment to exercise the overflow path manually:
-    # cache.append(fill_with(3.0, 1), fill_with(13.0, 1))  # must assert
+    with assert_raises():
+        cache.append(fill_with(3.0, 1), fill_with(13.0, 1))  # must assert
     print("test_append_refuses_overflow: ok (see comment for manual check)")
 
 
@@ -194,14 +192,14 @@ def test_get_returns_live_prefix() raises:
 
 
 def test_get_returns_view() raises:
-    # If `get` returns a view, writing through it mutates self.keys.
-    # If it returns a copy, the write is invisible to the cache.
     var cache = make_cache()
     cache.append(fill_with(1.0, 2), fill_with(11.0, 2))
-    var (k, _) = cache.get()
-    # Write 99.0 into the first live slot via the returned tensor.
+    var (k, v) = cache.get()
+    # Shape is the live prefix (length=2), not the full capacity (4).
+    assert_true(k.shape()[2] == 2)
+    assert_true(v.shape()[2] == 2)
+    # Write-through: if view, mutating k mutates cache.keys.
     k.fill(Scalar[F32](99.0), s(), i(0), i(0), i(0))
-    # If view: cache.keys now has 99.0 there. If copy: still 1.0.
     assert_true(cache.keys[s(), i(0), i(0), i(0)].item() == 99.0)
     print("test_get_returns_view: ok (get returns a view)")
 
