@@ -247,7 +247,7 @@ struct MultiHeadAttention:
             q.matmul(k) * self.inv_scale
         )  # (B, n_head, T, T)
 
-        # The mask goes in BEFORE softmax: every "future" cell (j > i) is set
+        # The mask goes in before softmax: every "future" cell (j > i) is set
         # to -infinity, so softmax gives it exactly zero weight. Zeroing the
         # weights afterwards would leave the rows not summing to 1.
         var masked_scores = scaled_attn_scores.masked_fill(
@@ -294,7 +294,7 @@ struct MultiHeadAttention:
         var T_new = x_shape[1]
         var C = x_shape[2]
 
-        # ---- Project Q, K, V for the new positions --------------------------
+        # Project Q, K, V for the new positions
         var qkv = self.c_attn(x)  # (B, T_new, 3*C)
         var q = qkv.slice(0, C, axis=2)  # (B, T_new, C)
         var k = qkv.slice(C, 2 * C, axis=2)  # (B, T_new, C)
@@ -311,14 +311,12 @@ struct MultiHeadAttention:
             [0, 2, 1, 3]
         )
 
-        # ---- Append new K/V, then read the full cache -----------------------
-        # `cache` is a named ref parameter, so `append` (a mut method) is legal
-        # on it: no Optional unwrapping, no rvalue temporary.
+        # Append new K/V, then read the full cache
         cache.append(k, v)
         ref (k_all, v_all) = cache.get()  # (B, n_head, length, head_dim)
         var seq_len_all = cache.length
 
-        # ---- Scores ---------------------------------------------------------
+        # Scores
         # q:      (B, n_head, T_new, head_dim)
         # k_all^T:(B, n_head, head_dim, seq_len_all)
         # ->       (B, n_head, T_new, seq_len_all)
@@ -328,7 +326,7 @@ struct MultiHeadAttention:
         # (B, h, len, d) layout, so the transpose happens on k_all instead.
         var scores = q.matmul(k_all.permute([0, 1, 3, 2])) * self.inv_scale
 
-        # ---- Mask -----------------------------------------------------------
+        # Masking
         # Decode (T_new == 1): one query, all cached positions are in its past.
         # No mask — masking would only remove valid attention.
         # Prefill (T_new > 1): cache was empty, so seq_len_all == T_new, and
@@ -345,7 +343,7 @@ struct MultiHeadAttention:
                 self.tril[:T_new, :T_new] == 0, neg_inf[F32]()
             )
 
-        # ---- Softmax, dropout, weighted sum ---------------------------------
+        # Softmax, dropout, weighted sum
         var attn_weights = masked_scores.softmax(axes=[-1])
         var attenuated = self.dropout(attn_weights)
         var weighted = attenuated.matmul(v_all)  # (B, n_head, T_new, head_dim)
@@ -510,7 +508,7 @@ struct CharGPT:
     var token_embedding_table: Embedding[F32]
     var position_embedding_table: Embedding[F32]
     var blocks: List[Block]
-    var ln_f: LayerNorm[F32]
+    var final_norm: LayerNorm[F32]
     var lm_head: Linear[F32]
     var criterion: CrossEntropyLoss[F32]
     var h_params: HParams
@@ -527,7 +525,7 @@ struct CharGPT:
         self.blocks = List[Block](capacity=h_params.n_layer)
         for _ in range(h_params.n_layer):
             self.blocks.append(Block(h_params))
-        self.ln_f = LayerNorm[F32](h_params.n_embd)
+        self.final_norm = LayerNorm[F32](h_params.n_embd)
         self.lm_head = Linear[F32](
             in_features=h_params.n_embd,
             out_features=vocab_size,
@@ -561,7 +559,7 @@ struct CharGPT:
             x = block(x)
 
         # Final LayerNorm then linear projection to vocabulary logits.
-        x = self.ln_f(x)
+        x = self.final_norm(x)
         var logits = self.lm_head(x)  # (B, T, vocab_size)
         var loss: Optional[Tensor[F32]] = None
 
@@ -606,7 +604,7 @@ struct CharGPT:
             ref block = self.blocks[i]
             x = block.forward_cached(x)
 
-        x = self.ln_f(x)
+        x = self.final_norm(x)
         return self.lm_head(x)
 
     def parameters(ref self) -> List[Pointer[Tensor[F32], MutAnyOrigin]]:
@@ -620,7 +618,7 @@ struct CharGPT:
             ref block_params = block.parameters()
             for param in range(len(block_params)):
                 params.append(block_params[param])
-        params.extend(self.ln_f.parameters())
+        params.extend(self.final_norm.parameters())
         params.extend(self.lm_head.parameters())
 
         return params^
@@ -633,7 +631,7 @@ struct CharGPT:
             ref block = self.blocks[i]
             block.train()
 
-        self.ln_f.train()
+        self.final_norm.train()
         self.lm_head.training = True
 
     def eval(mut self):
@@ -644,7 +642,7 @@ struct CharGPT:
             ref block = self.blocks[i]
             block.eval()
 
-        self.ln_f.eval()
+        self.final_norm.eval()
         self.lm_head.training = False
 
     def generate(
@@ -750,7 +748,7 @@ struct CharGPT:
         init_seed: Optional[Int] = None,
     ) raises -> Tensor[INT]:
         """Cached autoregressive generation. Same contract as `generate`:
-        same prompt, same seed, same output — but O(T) instead of O(T²).
+        same prompt, same seed, same output — but O(T) instead of O(T^2).
         """
         if indices.numels() == 0:
             raise Error("generate: empty prompt")
@@ -759,8 +757,7 @@ struct CharGPT:
 
         self.eval()
 
-        # Reset every block's cache. Generation-scoped state; a fresh start
-        # every call.
+        # Reset every block's cache
         for i in range(len(self.blocks)):
             ref block = self.blocks[i]
             block.reset_cache()
@@ -778,7 +775,7 @@ struct CharGPT:
         var have_seed = init_seed != None
         var seq_length = self.h_params.seq_length
 
-        # ---- Prefill --------------------------------------------------------
+        # Prefill
         var prompt_len = len(ids)
         var T_prefill = min(prompt_len, seq_length)
         var prefill_start = prompt_len - T_prefill
@@ -803,7 +800,7 @@ struct CharGPT:
             self.train()
             return Self.ids_to_tensor(ids)
 
-        # ---- Decode ---------------------------------------------------------
+        # Decode
         while made < max_new_tokens:
             # Evict from every block's cache if full, before appending.
             for i in range(len(self.blocks)):
@@ -848,25 +845,19 @@ struct CharGPT:
     ) raises -> Int:
         """Draw one token id from 1-D `logits` (V,).
 
-        - `temperature <= 0` or `top_k == 1` → greedy argmax (deterministic).
-        - Otherwise: keep the top-`k` entries (`0 < k < V`; `k <= 0` or `k >= V`
-          disables the mask), scale the survivors by `1/temperature`, softmax,
-          single `multinomial` draw.
+        temperature (temp): divides the logits. Low temp → sharp/peaky
+        distribution → mostly the best token. High temp → flatter → more
+        random. temp ≤ 0 means - just take the best one.
 
-        Seeding:
-        - `init_seed == None` → `multinomial` draws fresh entropy per call, so
-          repeated calls are (almost surely) different. This is the default.
-        - `init_seed != None` → the draw is reproducible for a given `s`.
+        top_k: keep only the k highest-scoring tokens, throw the rest away
+        (set to -inf), then softmax over those. Prevents sampling from the
+        nonsical long tail.
 
-        Scaling by positive `1/temperature` is monotonic, so it commutes with
-        top-k selection: we select on raw logits and scale only the survivors.
         """
         var V = logits.numels()
         if V == 0:
             raise Error("sample: empty logits")
 
-        # temperature <= 0 means "no randomness"; top_k == 1 means "only one
-        # candidate".
         if temperature <= 0.0 or top_k == 1:
             return Int(logits.argmax(axis=0).item())
 
@@ -882,12 +873,7 @@ struct CharGPT:
 
         if top_k > 1 and top_k < V:
             # Manual selection: repeatedly take the current max and mask it
-            # with -inf so the next argmax finds the runner-up. O(top_k * V)
-            # total. At k=50, V=256 that is ~12.8k comparisons — negligible.
-            # If V or k grows, swap this for a min-heap (O(V log k)) or
-            # quickselect (O(V) avg). Selection runs on raw logits (see
-            # docstring) and we snapshot the *scaled* value at pick time, so
-            # logits is never re-read and no full-V division pass is needed.
+            # with -inf so the next argmax finds the runner-up.
             var work = logits.clone()
             var kept = List[Int](capacity=top_k)
             var kept_values = List[Scalar[F32]](capacity=top_k)
@@ -915,9 +901,7 @@ struct CharGPT:
                 # input directly.
                 probs = logits.softmax[track_grad=False](axes)
 
-        # One sample, so `replacement` is inert here; kept for callers who
-        # later bump num_samples. `init_seed == None` → fresh entropy inside
-        # `multinomial`; `init_seed != None` → reproducible draw.
+        # One sample
         var drawn = probs.multinomial(
             num_samples=1, replacement=False, init_seed=init_seed
         )
@@ -989,6 +973,7 @@ def generate_text(
 
 
 comptime current_time = lambda () -> Float64: Float64(now())
+
 
 def main() raises:
     # Settings come from key=value arguments; anything not given keeps its
