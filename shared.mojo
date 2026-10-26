@@ -63,8 +63,8 @@ struct CmdLineArgs(ImplicitlyCopyable, Writable):
         args: Span[StringSpan[ImmStaticOrigin], ImmStaticOrigin],
         # The defaults. Each one is used when its key is absent from `args`
         # (or when its value cannot be parsed, see `to_dtype`).
-        batch_size: Int = 16,
-        seq_length: Int = 32,
+        batch_size: Int = 32,
+        seq_length: Int = 64,
         eval_iters: Int = 50,
         eval_interval: Int = 300,
         max_iters: Int = 5000,

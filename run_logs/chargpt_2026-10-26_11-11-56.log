@@ -1,0 +1,402 @@
+=== Run started: 2026-10-26 11:11:56 UTC ===
+=== Command: mojo chargpt.mojo  ===
+=== Host: Linux 6.12.113+deb13-cloud-amd64 x86_64 ===
+
+=================================================================
+CharGPT training | tokenizer: mbpe BPETokenizer[CharPretokenizer]
+=================================================================
+Hyper params:  CmdLineArgs(batch_size=32, seq_length=64, eval_iters=50, eval_interval=300, max_iters=5000, max_new_tokens=500, n_embd=192, n_head=6, n_layer=6, learning_rate=0.001, drop_ratio=0.1)
+
+[1/6] Loading corpus
+Total bytes:  1115394
+Total code points:  1115394
+Total graphemes:  1115394
+
+  [time] load corpus: 0.01s
+
+[2/6] Training tokenizer
+  vocab size: 256
+  [time] tokenizer training: 0.03s
+  encoded tokens: 1115394
+  [time] encode corpus: 0.03s
+
+[3/6] Building dataset, model and optimizer
+  [time] setup: 0.16s
+
+[4/6] Baseline before training (expect loss ~6.6)
+  step 0 | train loss 6.4972405 | val loss 6.501705 | eval 22.00s
+
+Wherı+ÿ*ıı+Ãı§Î’¼—0—Aı§^Aı—ııı9¤Uı³Úfıı§ıı’¼ı„am9’ı©Õ©0¹¼2ı¥¼[ıı–3ı‚ıĞë[ı³¼EıU0ÉıÕ[ıâı©0³îÕııùıPıııPòıùùù‹9ùıI¹ı³0ımıà˜ıı³Pı¼ı3âämıı3[¥¨ış¼g”ııııı¼ıı¼’ııä¼ıı…ımı¼ı3[ı»:ı¼Õı³ı¼’ıWÏùııpù¼¼ş~ı³¼ùkŸ³ùùùùŸı¼’[Ğ˜ù”3ııııı¼„ı>9ò©”ı¼’ºıùı³³ 0ı³ııA¼Pp[’mııWıºÉU¼³ı”ışıı˜ı©„[¹ıı[ııºı’ºıı[ı³3¨¼ıÇWı¼ıııW0ùù¥[ııWIù„ımô¼p¼ùE[ıÕ¥³ı[ùıQıımıWı3ùºÕù!³¼ııı©[ıı§ë[ış’şWııı€‹ıÉ¢’E”³ı¼³ù€30òˆ3ı	»¼ùııë‹º¼0ıııı¼³ı¼ù•EıııºıWıùıfAı³Œ¥Ï¼ı³³ı¼ııÉ3º§3¢ºı˜ùı§[…ı[ıı+ıù¼³³¼’ºù¼ııºı„ı§”ı’OŞ³‹ıs¼Æ’ı¼‹
+  [time] sample generation: 6.59s
+
+[5/6] Training for 5000 steps (eval every 300 )
+  step 300 | train loss 2.3465223 | val loss 2.361305 | 2.03s/step | eval 21.14s | ETA 2h 39m 06s
+s:
+Conr and fate hy wirss ly sare
+Tom ir or cacenensse we bif mes:
+Thatal oucour t h there f ly ale wthar beas we s seseand herlire
+I we merts deayoncher wevef cos hin t s car ds s s wingringhelit bur wel t ore;
+Thais p wins st she hourwe waureron wtht avie thantances at gravince were amy,
+Foulloy thare Of t t limp oous cealind k lyse lt I ses chey hirale
+Her t r ceringhe prlimem cowis lo our th s trar ser;
+Nis t thay chat t hery pra pid bloring:
+I fr y alour rine t thelvave an meas wind
+Thang our t 
+  [time] sample generation: 6.72s
+
+  step 600 | train loss 1.9626964 | val loss 2.0366888 | 1.95s/step | eval 21.04s | ETA 2h 26m 05s
+suffetiour the were my to atwere may lear heave,
+Butt is is king kithis irt's sheik
+broorght: ming whou proughts I it seel whis you brow scomentresay.
+
+COMETIO:
+You nhe my in trient the so sign the hape ray me you lith
+To the is melce ware in homs shat sent to hat
+What he from lert witell Sus.
+
+Componit poret:
+It, thris whim apend ind hem of it shat have with
+On that his comsille for onta des, macon 'Tand is but whou sick comme?
+
+So ELARD:
+A come!
+But my whis thousere food wagaid; what you have lade
+
+  [time] sample generation: 6.48s
+
+  step 900 | train loss 1.7540556 | val loss 1.8791473 | 1.91s/step | eval 21.12s | ETA 2h 14m 22s
+and detreed pood with here duke.
+
+KING RICHARD II:
+A be, time my his heave furcompand the bidge.
+
+ROMIO:
+May they there, what in the goods my bloy looks,
+Servonge thereart manine him of your lovers,
+Decomest teart it on your to dootherm's and with.
+
+FROMER:
+But to therewith, so, letty light be their,
+I will monought mear they to me.
+
+GREMIO:
+Then be king toll I make do how Reserins of gent.
+
+VAREY:
+Boy, thou then bloodd's well; truest, which I cand
+his knainglia soname, with to is they.
+
+NOMERS:
+Good
+  [time] sample generation: 6.38s
+
+  step 1200 | train loss 1.6414688 | val loss 1.8064704 | 1.93s/step | eval 20.96s | ETA 2h 04m 02s
+his when will show duke as my breather thyself
+They blood me off your helparld shall of Coris
+Wit like ensh me much enclike and place! thy thereford the to begn:
+Then this I well oth perform dand were of hope is:
+Nor he Pomenes, and if for my lord: when now, may
+And this my fair charger to fie
+this do vor dot the mady did outh Lild Ker to the par
+speak think be ever nim: is so reventer good now
+the blood the before of did, fears and take your not
+conmence him heart doth live s, respy theing and,
+We'l
+  [time] sample generation: 6.41s
+
+  step 1500 | train loss 1.5688542 | val loss 1.7414835 | 1.95s/step | eval 20.89s | ETA 1h 54m 07s
+I heaven lie to come from to was
+Shall to the duke.
+No well, who are my of taberters and not and servant.
+
+YORK:
+Come that Det him, morn forth, hope thee, I bestard
+Tity 'tis sent hear with it man such'd.
+
+MARIANA:
+What, I posting me all in.
+
+MENENIUS:
+Constansce against for this present to spect.
+
+CORIOLANUS:
+Thirst you I would till entrent in dead
+Let that I changed of his my breath man
+Against That done the wort this beut motter of of short.
+
+CAMILLO:
+No, he's alone, and the sail,
+And fortune the 
+  [time] sample generation: 6.58s
+
+  step 1800 | train loss 1.5215249 | val loss 1.6924965 | 1.93s/step | eval 21.23s | ETA 1h 44m 06s
+n his obed.
+
+ROMEO:
+And you pass leave:
+And have to doods it
+Seemble of Warl: the father
+to back, it is my heads lady, many, and the very,
+In by thee, you conspections already.
+
+RICHMOND:
+My lord, someaning have haths by blown.
+
+FLORIZEL:
+I say, not coms nothing! and to the starget.
+
+MENENIUS:
+Now, by and thou you
+Haster: by that love and sons
+Tell you a show the moth proce repents.
+
+ROMEO:
+The know you have the bear here offenced,
+Before and the heaven you with my countest.
+
+WARWICK:
+My lord!
+
+JULIE
+  [time] sample generation: 6.54s
+
+  step 2100 | train loss 1.4711266 | val loss 1.6785871 | 1.92s/step | eval 21.35s | ETA 1h 34m 09s
+weet them and to affect,
+The king far escome; if if you are this traitors,
+And covery ere to think eyes them; I till womer
+Hard, we how the this reason them tyrans:
+Say, you stard that I the doth of you.
+My come, a course is Palie.
+
+EDWARD:
+That's cled them frae arestice closent,
+But be thou handst a offect Lady frants,
+And will where black as Clembona to a see on the holing.
+
+PRINCE:
+Eas thou do tell this comes which are his too?
+What! royal sign we lands with his a kisse,
+Who last at the great in m
+  [time] sample generation: 6.50s
+
+  step 2400 | train loss 1.4381747 | val loss 1.6365612 | 1.92s/step | eval 21.38s | ETA 1h 24m 15s
+ now I will not speak that your from his peer.
+
+EXETER:
+All king's be somfriet thee,
+I'll talk'd eaths to airy is us busines;
+To the standed of out, may tell shake with suddy.
+
+LEONTES:
+O, his bear four fair that here;
+Then till the right of prepass the stand in Captista.
+
+YORK:
+Let misterson the from whence it with a father's saw
+With a virtuous to prove that care a mire at wretch
+To me it short statte in the part of res, and sun.
+
+CAMILLO:
+Your slear mother.
+
+POMPEY:
+I the shall be the king of it.
+
+  [time] sample generation: 6.72s
+
+  step 2700 | train loss 1.4225376 | val loss 1.5992618 | 1.92s/step | eval 21.12s | ETA 1h 14m 25s
+ir order horse?
+
+LUCIO:
+Look in hence!
+
+RIVERS:
+See your siness!
+
+KING RICHARD III:
+
+Clown:
+O more Romeo of heart;
+Now well thanking then I in the personer;
+If One not I them should hear a worthy carage's house.
+
+YORK:
+Signior Till to emprose that Hastingman:
+Here's I shall not all keeping, if he safety
+And shall be blest that the mother of in our the tongue,
+Who shall I am no forture to life and weal:
+And good the grace oft with a firest,
+White that the ragen and such spakers with him to maried.
+
+Se
+  [time] sample generation: 6.66s
+
+  step 3000 | train loss 1.3895335 | val loss 1.5933446 | 1.92s/step | eval 22.15s | ETA 1h 04m 38s
+RIEL:
+Madam, but this yet and full not to the man.
+Obeing of our fair of a love hatrans of do concemn.
+
+PETER:
+The people, or and come the high of more come than our paster
+To reportn and of those take hie.
+But I would not pardon, how his sons, with the blood,
+As if they all the under at loves as it is obt.
+
+Messenger:
+O, it better so soul for spirit
+His govern and the Worse of of Glorgencio!
+What say, is what stands a near it? how!
+
+First Gentleman:
+And I would not to it, but I do make
+To be blood, 
+  [time] sample generation: 6.87s
+
+  step 3300 | train loss 1.3878031 | val loss 1.587077 | 1.92s/step | eval 21.50s | ETA 54m 54s
+ance: I will be odd stores whose
+Is it was thou mindst to their prisons,
+And Is her stabb'd; they say our head,
+The had temples and both sompetitle his age;
+When thou liest it well, and this advire
+Again. Prettition should be counts i' their course,
+Should cleak him master be was it ingel.
+
+KING RICHARD III:
+O all it me. Hang some was confess of his counself?
+
+MARIANA:
+When, if the earth of that?
+
+QUEEN ELIZABETH:
+And lose, most that comes quite to be too,
+Or any slipp to sing by the near
+But wittle 
+  [time] sample generation: 6.57s
+
+  step 3600 | train loss 1.3734288 | val loss 1.5783008 | 1.92s/step | eval 21.20s | ETA 45m 11s
+;
+Now they the hard was that smun.
+
+POMPEY:
+'We see his head noble from another that sport.
+
+MENENIUS:
+Now, my lord.
+To bear more, so good mortal and so set her state
+And to when a defend, that thou darest believe thee seen,
+When she good have stongue here would stainted speak,
+My lord, that feeling the senators being the firm,
+Of some played the base struck of the scape,
+That would it does to his foul glory blishment,
+When he should the will need of this pass.
+The senator wrong, and needs that turbs
+  [time] sample generation: 6.65s
+
+  step 3900 | train loss 1.370011 | val loss 1.5668991 | 1.93s/step | eval 22.01s | ETA 35m 30s
+time:
+That I need yet hear; but yet as sit therefore
+And such a dual'd too play your lordship but he is
+of a while for this action.
+
+LEONTES:
+No, by the gentleman, and thou there noted and as death?
+
+First Citizen:
+Marry, hollow their coming in the people and the worlds.
+
+MENENIUS:
+I am no man ill, but and I think,
+So pertaken to her will not shall the king,
+To sire an old traitor in winter'd friends,
+Which I should but for extremembt it,
+But only shall, lay to my lord.
+
+BIANGHAM:
+But therefore I but
+  [time] sample generation: 6.65s
+
+  step 4200 | train loss 1.3393387 | val loss 1.5685467 | 1.93s/step | eval 21.28s | ETA 25m 49s
+are vipes!
+
+RICHARD:
+So live that he were disposition.
+But if I did on my least too least and would to rest,
+By the struck of twice days come about a runnish,
+By father in my oath, and under harm weakd him,
+Why, and, why which we'll record his majesty
+As they and well do so what time me well say. They,
+Prove where it is my handsirs, and that I say,
+You are rest being too, and, like a stolen more a
+wife.
+
+HERMIONE:
+I go this help, that what last with the lost did
+Put my hands to addness purpose to the
+  [time] sample generation: 6.57s
+
+  step 4500 | train loss 1.3379369 | val loss 1.5499094 | 1.94s/step | eval 21.20s | ETA 16m 09s
+
+Left is a fair of a spite,
+As so do thrink and in that Pliss' steel
+And all winterced to come some from the
+lay to accept of sudden, let me see you shall well me,
+It is fault us a tworn of true, of this worst
+We most change to chepary, he was sever in the companion
+With a breathe this wife:
+Thine end to the night is the strain.
+
+Second Murderer:
+I know't you, and be such a mirch.
+
+KING RICHARD II:
+My lord, and I Protes you do truly.
+
+BRUTUS:
+Nay, poison, properies better,
+Look this worth looks on hi
+  [time] sample generation: 6.49s
+
+  step 4800 | train loss 1.3241693 | val loss 1.5525277 | 1.95s/step | eval 21.41s | ETA 6m 29s
+der him and frail man other days!
+But when you take his cause within their title hife?
+
+AUFIDIUS:
+Therefore, he had done is to subject of our own ord
+Than and the senseless man with custompute,
+And thou gave in this a journeys to might in
+Better, power that brought the son; what, which thou must
+and have said the Lord Angelo. Say, I ! Sweet well, O high
+All I may be said, for leave me with a thy sighs.
+
+HASTINGS:
+But foutward his forcessed soft hath to the news.
+
+POMPEY:
+Here's the king is not be str
+  [time] sample generation: 6.73s
+
+[6/6] Final sample from the trained model
+ concusion have spair'd in our bed!
+Now she's nothing little souless are judge of we,
+And afters the mind, and throws and change,
+To make him Stanley serve his vains than may his
+his deterning fends the frown if he to-day'd,
+Which is not the whilst shall have a Tyrrel of him,
+Which the ctop of boys is no continue,
+That's away way with great abricle cradaining,
+In the prince that known at the three-blushing prince,
+The Duke of Ling Edward is another.
+
+JALWESHY:
+Yea, thou says nor so like Hastings, Ric
+  [time] sample generation: 6.64s
+
+=================================================================
+Done. Timing summary
+=================================================================
+  training (pure)  : 2h 41m 17s
+  avg per step     : 1.94s
+  steps / second   : 0.5166459701424329
+  evaluation       : 6m 02s
+  text generation  : 1m 58s
+  total wall clock : 2h 49m 19s
