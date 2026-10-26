@@ -27,6 +27,7 @@
 from std.utils.numerics import neg_inf
 from std.math import sqrt
 from std.sys import argv
+from std.testing import assert_true
 
 from tenmo.tensor import Tensor
 from bpe import BPETokenizer
@@ -45,6 +46,7 @@ from tenmo.net import GeLU
 from tenmo.layernorm import LayerNorm
 from tenmo.shared.shapes import Shape
 from shared import CmdLineArgs, TinyShakespeare
+from kvcache import KVCache
 
 # Short names for the element types used throughout.
 # INT    token ids
@@ -263,6 +265,94 @@ struct MultiHeadAttention:
         var values = weighted_values.permute([0, 2, 1, 3]).reshape(B, T, C)
         return self.c_proj(values)
 
+    def __call__(
+        mut self,
+        x: Tensor[F32],
+        mut cache: KVCache[F32],
+    ) raises -> Tensor[F32]:
+        """Cached causal multi-head attention forward.
+
+        `x` is (B, T_new, C), the NEW positions only. Compute their Q/K/V,
+        append K/V to the cache, then attend the new Q against the full
+        cached K/V (which includes the new positions, appended first).
+        Output is (B, T_new, C).
+
+        Two sub-cases:
+        - T_new == 1 (decode step): the single query sees all `cache.length`
+          cached positions, all in its past. No mask.
+        - T_new > 1 (prefill): the cache was empty before this call, so
+          cache.length == T_new, and the mask is tril[:T_new, :T_new] over
+          the whole (T_new, T_new) score matrix.
+
+        The mixed case (T_new > 1 against a non-empty cache) is not
+        supported: generate_cached prefills in one call with an empty cache,
+        then decodes one token at a time.
+        """
+        ref x_shape = x.shape()
+        var B = x_shape[0]
+        var T_new = x_shape[1]
+        var C = x_shape[2]
+
+        # ---- Project Q, K, V for the new positions --------------------------
+        var qkv = self.c_attn(x)  # (B, T_new, 3*C)
+        var q = qkv.slice(0, C, axis=2)  # (B, T_new, C)
+        var k = qkv.slice(C, 2 * C, axis=2)  # (B, T_new, C)
+        var v = qkv.slice(2 * C, 3 * C, axis=2)  # (B, T_new, C)
+
+        # (B, T_new, C) -> (B, n_head, T_new, head_dim)
+        q = q.reshape(B, T_new, self.n_head, self.head_dim).permute(
+            [0, 2, 1, 3]
+        )
+        k = k.reshape(B, T_new, self.n_head, self.head_dim).permute(
+            [0, 2, 1, 3]
+        )
+        v = v.reshape(B, T_new, self.n_head, self.head_dim).permute(
+            [0, 2, 1, 3]
+        )
+
+        # ---- Append new K/V, then read the full cache -----------------------
+        # `cache` is a named ref parameter, so `append` (a mut method) is legal
+        # on it: no Optional unwrapping, no rvalue temporary.
+        cache.append(k, v)
+        ref (k_all, v_all) = cache.get()  # (B, n_head, length, head_dim)
+        var seq_len_all = cache.length
+
+        # ---- Scores ---------------------------------------------------------
+        # q:      (B, n_head, T_new, head_dim)
+        # k_all^T:(B, n_head, head_dim, seq_len_all)
+        # ->       (B, n_head, T_new, seq_len_all)
+        #
+        # The uncached path pre-transposes k at projection time (permute
+        # [0, 2, 3, 1]); here k_all comes from the cache in the natural
+        # (B, h, len, d) layout, so the transpose happens on k_all instead.
+        var scores = q.matmul(k_all.permute([0, 1, 3, 2])) * self.inv_scale
+
+        # ---- Mask -----------------------------------------------------------
+        # Decode (T_new == 1): one query, all cached positions are in its past.
+        # No mask — masking would only remove valid attention.
+        # Prefill (T_new > 1): cache was empty, so seq_len_all == T_new, and
+        # the mask is tril[:T_new, :T_new] over the whole score matrix.
+        var masked_scores: Tensor[F32]
+        if T_new == 1:
+            masked_scores = scores^
+        else:
+            # Prefill: seq_len_all == T_new, so the tril slice exactly covers
+            # the score matrix. (If this assertion fails, the mixed case was
+            # hit, which generate_cached never produces.)
+            assert_true(seq_len_all == T_new)
+            masked_scores = scores.masked_fill(
+                self.tril[:T_new, :T_new] == 0, neg_inf[F32]()
+            )
+
+        # ---- Softmax, dropout, weighted sum ---------------------------------
+        var attn_weights = masked_scores.softmax(axes=[-1])
+        var attenuated = self.dropout(attn_weights)
+        var weighted = attenuated.matmul(v_all)  # (B, n_head, T_new, head_dim)
+
+        # (B, n_head, T_new, head_dim) -> (B, T_new, C), then mix heads.
+        var values = weighted.permute([0, 2, 1, 3]).reshape(B, T_new, C)
+        return self.c_proj(values)
+
     def parameters(ref self) -> List[Pointer[Tensor[F32], MutAnyOrigin]]:
         # The optimizer needs a list of every weight it should update.
         # `tril` is a constant mask, not a weight, so it is not included.
@@ -348,6 +438,7 @@ struct Block:
     var attn: MultiHeadAttention
     var ln2: LayerNorm[F32]
     var mlp: MLP
+    var cache: KVCache[F32]
 
     def __init__(out self, h_params: HParams):
         self.ln1 = LayerNorm[F32](h_params.n_embd)
@@ -359,14 +450,32 @@ struct Block:
         )
         self.ln2 = LayerNorm[F32](h_params.n_embd)
         self.mlp = MLP(h_params.n_embd, h_params.drop_ratio)
+        # One cache per block. B is always 1 during generation.
+        var head_dim = h_params.n_embd // h_params.n_head
+        self.cache = KVCache[F32](
+            1, h_params.n_head, h_params.seq_length, head_dim
+        )
 
-    def __call__(mut self, x: Tensor[F32]) raises -> Tensor[F32]:
+    def __call__(
+        mut self, x: Tensor[F32]
+    ) raises -> Tensor[F32]:
         var h = self.ln1(x)
         var a = self.attn(h)
         var residual = x + a
         var h2 = self.ln2(residual)
         var m = self.mlp(h2)
         return residual + m
+
+    def forward_cached(mut self, x: Tensor[F32]) raises -> Tensor[F32]:
+        var h = self.ln1(x)
+        var a = self.attn(h, self.cache)
+        var residual = x + a
+        var h2 = self.ln2(residual)
+        var m = self.mlp(h2)
+        return residual + m
+
+    def reset_cache(mut self):
+        self.cache.reset()
 
     def parameters(ref self) -> List[Pointer[Tensor[F32], MutAnyOrigin]]:
         var params = List[Pointer[Tensor[F32], MutAnyOrigin]]()
@@ -470,6 +579,36 @@ struct CharGPT:
             )
 
         return logits^, loss^
+
+    def forward_cached(
+        mut self,
+        indices: Tensor[INT],
+        position: Int,
+    ) raises -> Tensor[F32]:
+        """Cached forward pass. `indices` is (B, T_new), the NEW positions only.
+        `position` is the window-relative position of the first new token
+        (0 for prefill; min(total-1, seq_length-1) for decode).
+
+        Threads each block's cache through the cached attention overload.
+        Returns logits (B, T_new, V).
+        """
+        ref indices_shape = indices.shape()
+        var token_count = indices_shape[1]
+
+        var token_embeddings = self.token_embedding_table(
+            indices.to_dtype[INT64]()
+        )
+        var position_embeddings = self.position_embedding_table(
+            Tensor[INT64].arange(Int64(position), Int64(position + token_count))
+        )
+        var x = token_embeddings + position_embeddings
+
+        for i in range(len(self.blocks)):
+            ref block = self.blocks[i]
+            x = block.forward_cached(x)
+
+        x = self.ln_f(x)
+        return self.lm_head(x)
 
     def parameters(ref self) -> List[Pointer[Tensor[F32], MutAnyOrigin]]:
         # Collect every weight in the model, for the optimizer.
@@ -597,6 +736,105 @@ struct CharGPT:
 
         self.train()
 
+        var out = List[Scalar[INT]](capacity=len(ids))
+        for i in range(len(ids)):
+            out.append(Scalar[INT](ids[i]))
+        return Tensor[INT].from_list[INT](out^)
+
+    def generate_cached(
+        mut self,
+        indices: Tensor[INT],
+        max_new_tokens: Int,
+        temperature: Float32 = 0.8,
+        top_k: Int = 50,
+        end_id: Int = -1,
+        init_seed: Optional[Int] = None,
+    ) raises -> Tensor[INT]:
+        """Cached autoregressive generation. Same contract as `generate`:
+        same prompt, same seed, same output — but O(T) instead of O(T²).
+        """
+        if indices.numels() == 0:
+            raise Error("generate: empty prompt")
+        if max_new_tokens <= 0:
+            raise Error("generate: max_new_tokens must be >= 1")
+
+        self.eval()
+
+        # Reset every block's cache. Generation-scoped state; a fresh start
+        # every call.
+        for i in range(len(self.blocks)):
+            ref block = self.blocks[i]
+            block.reset_cache()
+
+        # Copy the prompt into a growable list, validating as we go.
+        var ids = List[Int](capacity=indices.numels() + max_new_tokens)
+        for i in range(indices.numels()):
+            var v = Int(indices.get(i))
+            if v < 0:
+                self.train()
+                raise Error("generate: negative prompt id")
+            ids.append(v)
+
+        var base_seed = init_seed.value() if init_seed else 0
+        var have_seed = init_seed != None
+        var seq_length = self.h_params.seq_length
+
+        # ---- Prefill --------------------------------------------------------
+        var prompt_len = len(ids)
+        var T_prefill = min(prompt_len, seq_length)
+        var prefill_start = prompt_len - T_prefill
+        var prefill_ids = List[Scalar[INT]](capacity=T_prefill)
+        for i in range(prefill_start, prompt_len):
+            prefill_ids.append(Scalar[INT](ids[i]))
+        var prefill_tensor = Tensor[INT].d2([prefill_ids^])  # (1, T_prefill)
+
+        var logits = self.forward_cached(prefill_tensor, position=0)
+        var V = logits.shape()[2]
+        var last = logits[Slicer(), -1, Slicer()]
+        var last_1d = last.reshape(V)
+        var step_seed = Optional[Int](None)
+        if have_seed:
+            step_seed = Optional[Int](base_seed)
+        var next_id = Self.sample(
+            last_1d, temperature, top_k, init_seed=step_seed
+        )
+        ids.append(next_id)
+        var made = 1
+        if end_id >= 0 and next_id == end_id:
+            self.train()
+            return Self.ids_to_tensor(ids)
+
+        # ---- Decode ---------------------------------------------------------
+        while made < max_new_tokens:
+            # Evict from every block's cache if full, before appending.
+            for i in range(len(self.blocks)):
+                ref block = self.blocks[i]
+                if block.cache.length == block.cache.capacity:
+                    block.cache.evict_oldest(1)
+
+            var new_id = ids[len(ids) - 1]
+            var new_tensor = Tensor[INT].d1([Scalar[INT](new_id)]).reshape(1, 1)
+            var position = min(len(ids) - 1, seq_length - 1)
+
+            var logits2 = self.forward_cached(new_tensor, position=position)
+            var last2 = logits2[Slicer(), -1, Slicer()]
+            var last2_1d = last2.reshape(V)
+            var step_seed2 = Optional[Int](None)
+            if have_seed:
+                step_seed2 = Optional[Int](base_seed + made)
+            var next_id2 = Self.sample(
+                last2_1d, temperature, top_k, init_seed=step_seed2
+            )
+            ids.append(next_id2)
+            made += 1
+            if end_id >= 0 and next_id2 == end_id:
+                break
+
+        self.train()
+        return Self.ids_to_tensor(ids)
+
+    @staticmethod
+    def ids_to_tensor(ids: List[Int]) raises -> Tensor[INT]:
         var out = List[Scalar[INT]](capacity=len(ids))
         for i in range(len(ids)):
             out.append(Scalar[INT](ids[i]))
