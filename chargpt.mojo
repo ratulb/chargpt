@@ -45,7 +45,8 @@ from tenmo.dropout import Dropout
 from tenmo.net import GeLU
 from tenmo.layernorm import LayerNorm
 from tenmo.shared.shapes import Shape
-from shared import CmdLineArgs, TinyShakespeare
+from tenmo.shared.timing import now
+from shared import CmdLineArgs, TinyShakespeare, fmt_secs, since, log_stage
 from kvcache import KVCache
 
 # Short names for the element types used throughout.
@@ -456,9 +457,7 @@ struct Block:
             1, h_params.n_head, h_params.seq_length, head_dim
         )
 
-    def __call__(
-        mut self, x: Tensor[F32]
-    ) raises -> Tensor[F32]:
+    def __call__(mut self, x: Tensor[F32]) raises -> Tensor[F32]:
         var h = self.ln1(x)
         var a = self.attn(h)
         var residual = x + a
@@ -989,29 +988,51 @@ def generate_text(
     model.train()
 
 
+comptime current_time = lambda () -> Float64: Float64(now())
+
 def main() raises:
     # Settings come from key=value arguments; anything not given keeps its
     # default. An unknown key or an unparsable value is silently ignored,
     # so check the "Hyper params" line printed below.
+    var t_total = current_time()
+
+    print("=================================================================")
+    print("CharGPT training | tokenizer: mbpe BPETokenizer[CharPretokenizer]")
+    print("=================================================================")
+
     var h_params = HParams(argv())
     print("Hyper params: ", h_params)
+    print()
+
+    print("[1/6] Loading corpus")
+    var t = current_time()
     var text = TinyShakespeare.text()
-    # We are training a character model - not a subword model
-    # With mbpe's BPETokenizer we should be able to handle any unicode character thrown at it - not necessarily ascii
+    log_stage("load corpus", since(t))
+    print()
+
+    # We are training a character model - not a subword model.
+    # With mbpe's BPETokenizer we handle any unicode character, not just ascii.
+    print("[2/6] Training tokenizer")
+    t = current_time()
     var tokenizer = BPETokenizer[CharPretokenizer]()
     var corpus = Span[String]([text])
-    # The corpus has 65 unique ascii - as can be found in accompanying bigram model
-    # Requesting 300 token(char) would still produce 256 vocab - BPE base starting vocab(255 bytes)
+    # The corpus has 65 unique ascii chars (see the accompanying bigram model).
+    # Requesting 300 tokens still yields a 256 vocab: the BPE base vocab is
+    # the 256 byte values.
     tokenizer.train(corpus, 300)
-
     var vocab_size = len(tokenizer)
-    # Would print 256
-    print("Tokenizer len: ", len(tokenizer))
-    # Create tensor from text data
+    print("  vocab size:", vocab_size)  # expect 256
+    log_stage("tokenizer training", since(t))
+
+    t = current_time()
     var data = Tensor[INT].d1(tokenizer.encode(text^))
-    # Create the dataset to train and test from
+    print("  encoded tokens:", data.numels())
+    log_stage("encode corpus", since(t))
+    print()
+
+    print("[3/6] Building dataset, model and optimizer")
+    t = current_time()
     var dataset = Dataset(data^, h_params)
-    # The character based generative model
     var model = CharGPT(vocab_size, h_params)
     # AdamW keeps a running average of each weight's gradient and of its
     # square, and scales each step by them. Gradient clipping is available
@@ -1023,44 +1044,85 @@ def main() raises:
         # clip_value=Scalar[F32](0.5),
     )
     model.train()
+    log_stage("setup", since(t))
+    print()
+
     # Before any training: every weight uses Kaiming (He) init, which keeps
     # the initial logits at roughly unit variance. Cross-entropy of random
-    # logits is ln(256) ≈ 5.55 plus an overconfidence penalty, so ~6.6 is
+    # logits is ln(256) ~ 5.55 plus an overconfidence penalty, so ~6.6 is
     # expected here, not 5.55 (that would need near-zero logits). A value far
     # from ~6.6 would indicate a broken init or forward pass.
+    print("[4/6] Baseline before training (expect loss ~6.6)")
+    var eval_secs_total = Float64(0)
+    var gen_secs_total = Float64(0)
+
+    t = current_time()
     var losses = Loss.estimate(model, dataset, h_params.eval_iters)
+    var dt = since(t)
+    eval_secs_total += dt
     print(
-        "Starting: train loss {0}, val loss {1}".format(
-            losses["train"], losses["val"]
+        "  step 0 | train loss {0} | val loss {1} | eval {2}".format(
+            losses["train"], losses["val"], fmt_secs(dt)
         )
     )
-    print()
-    generate_text(
-        tokenizer,
-        model,
-        dataset,
-        h_params.max_new_tokens,
-    )
 
+    t = current_time()
+    generate_text(tokenizer, model, dataset, h_params.max_new_tokens)
+    dt = since(t)
+    gen_secs_total += dt
+    log_stage("sample generation", dt)
     print()
-    # The training loop. One step = one batch:
+
+    # One step = one batch:
     # forward -> loss -> clear old gradients -> backward -> weight update
+    print(
+        "[5/6] Training for",
+        h_params.max_iters,
+        "steps (eval every",
+        h_params.eval_interval,
+        ")",
+    )
+    var train_secs = Float64(0)  # pure training time (no eval/generation)
+    var seg_start = current_time()  # start of the current training segment
+    var seg_steps = 0  # steps completed in the current segment
+
     for step in range(h_params.max_iters):
         # every once in a while evaluate the loss on train and val sets
         if (step + 1) % h_params.eval_interval == 0:
+            # Close the training segment before eval time starts counting.
+            var seg_secs = since(seg_start)
+            train_secs += seg_secs
+
+            var t_eval = current_time()
             var losses = Loss.estimate(model, dataset, h_params.eval_iters)
-            print(
-                "Step {0}: train loss {1}, val loss {2}".format(
-                    step + 1, losses["train"], losses["val"]
+            var eval_dt = since(t_eval)
+            eval_secs_total += eval_dt
+
+            var line = "  step {0} | train loss {1} | val loss {2}".format(
+                step + 1, losses["train"], losses["val"]
+            )
+            if seg_steps > 0:
+                line += (
+                    " | " + fmt_secs(seg_secs / Float64(seg_steps)) + "/step"
                 )
-            )
+            line += " | eval " + fmt_secs(eval_dt)
+            # ETA from the average pure-training speed so far.
+            if step > 0 and train_secs > 0:
+                var avg = train_secs / Float64(step)
+                var remaining = Float64(h_params.max_iters - step) * avg
+                line += " | ETA " + fmt_secs(remaining)
+            print(line)
+
+            var t_gen = current_time()
+            generate_text(tokenizer, model, dataset, h_params.max_new_tokens)
+            var gen_dt = since(t_gen)
+            gen_secs_total += gen_dt
+            log_stage("sample generation", gen_dt)
             print()
-            generate_text(
-                tokenizer,
-                model,
-                dataset,
-                h_params.max_new_tokens,
-            )
+
+            # Restart the training segment after eval/generation.
+            seg_start = current_time()
+            seg_steps = 0
 
         var (xb, yb) = dataset.random_batch("train")
         var output = model(xb, yb)
@@ -1073,12 +1135,31 @@ def main() raises:
         loss_inner.backward()
         # nudge every weight a little in that direction
         optimizer.step()
+        seg_steps += 1
 
+    # Count the trailing segment (steps after the last eval).
+    if seg_steps > 0:
+        train_secs += since(seg_start)
+
+    print("[6/6] Final sample from the trained model")
     model.eval()
-    # A final sample from the trained model.
-    generate_text(
-        tokenizer,
-        model,
-        dataset,
-        h_params.max_new_tokens,
-    )
+    t = current_time()
+    generate_text(tokenizer, model, dataset, h_params.max_new_tokens)
+    dt = since(t)
+    gen_secs_total += dt
+    log_stage("sample generation", dt)
+    print()
+
+    var total = since(t_total)
+
+    print("=================================================================")
+    print("Done. Timing summary")
+    print("=================================================================")
+    print("  training (pure)  :", fmt_secs(train_secs))
+    if h_params.max_iters > 0 and train_secs > 0:
+        var per_step = train_secs / Float64(h_params.max_iters)
+        print("  avg per step     :", fmt_secs(per_step))
+        print("  steps / second   :", Float64(h_params.max_iters) / train_secs)
+    print("  evaluation       :", fmt_secs(eval_secs_total))
+    print("  text generation  :", fmt_secs(gen_secs_total))
+    print("  total wall clock :", fmt_secs(total))

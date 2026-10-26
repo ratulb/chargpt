@@ -1,6 +1,7 @@
 # chargpt
 
-A small character-level GPT in [Mojo](https://www.modular.com/mojo), built step by step on CPU. It trains on Tiny Shakespeare and writes Shakespeare-shaped text, one character at a time.
+A small character-level GPT in the language designed for AI age - [Mojo](https://www.modular.com/mojo).
+Built step by step on CPU. It trains on Tiny Shakespeare and writes Shakespeare-shaped text, one character at a time.
 
 It is built on two libraries:
 

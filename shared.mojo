@@ -1,4 +1,4 @@
-"""What bigram.mojo and chargpt.mojo share?
+"""What bigram.mojo and chargpt.mojo share.
 
    CmdLineArgs      every run-time setting, read from key=value arguments
    TinyShakespeare  fetches the training text once and returns it as a String
@@ -12,6 +12,7 @@
 from std.pathlib import Path
 from std.os.process import Process
 from std.sys import argv
+from tenmo.shared.timing import now
 
 # Where the text comes from, and where the downloaded copy is kept. Once the
 # file exists in /tmp, later runs reuse it and do not download again.
@@ -232,3 +233,33 @@ struct TinyShakespeare:
         print("Total graphemes: ", content.count_graphemes())
         print()
         return content^
+
+
+def fmt_secs(secs: Float64) -> String:
+    """Human-readable duration: 0.42s, 12.50s, 3m 07s, 1h 02m 10s."""
+    var total_cs = Int(secs * 100.0 + 0.5)  # round to centiseconds
+    var whole = total_cs // 100
+    var cs = total_cs % 100
+    var frac = String(cs) if cs >= 10 else "0" + String(cs)
+    if whole < 60:
+        return String(whole) + "." + frac + "s"
+    var secs_part = whole % 60
+    var mins_total = whole // 60
+    var sec_str = String(secs_part) if secs_part >= 10 else "0" + String(
+        secs_part
+    )
+    if mins_total < 60:
+        return String(mins_total) + "m " + sec_str + "s"
+    var mins_part = mins_total % 60
+    var min_str = String(mins_part) if mins_part >= 10 else "0" + String(
+        mins_part
+    )
+    return String(mins_total // 60) + "h " + min_str + "m " + sec_str + "s"
+
+
+def since(start: Float64) -> Float64:
+    return Float64(now()) - start
+
+
+def log_stage(name: String, secs: Float64):
+    print("  [time] " + name + ": " + fmt_secs(secs))

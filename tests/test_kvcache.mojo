@@ -157,7 +157,6 @@ def test_sliding_window() raises:
     assert_true(all_equal(cache.keys, 4.0, 3, 4))
     print("test_sliding_window: ok")
 
+
 def main() raises:
     TestSuite.discover_tests[__functions_in_module()]().run()
-
-

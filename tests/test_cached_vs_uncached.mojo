@@ -21,7 +21,11 @@ from tenmo.tensor import Tensor
 from tenmo.adamw import AdamW
 from tenmo.shared.indexhelper import i as Indexer, s as Slicer
 from bpe import BPETokenizer
-from bpe.pretokenizer import PreTokenizer, ByteMapping, utf8_codepoint_byte_length
+from bpe.pretokenizer import (
+    PreTokenizer,
+    ByteMapping,
+    utf8_codepoint_byte_length,
+)
 
 from chargpt import (
     CharGPT,
@@ -36,6 +40,7 @@ from shared import CmdLineArgs, TinyShakespeare
 
 
 # ---- helpers ----------------------------------------------------------------
+
 
 def make_model(h_params: HParams, vocab_size: Int) -> CharGPT:
     var model = CharGPT(vocab_size, h_params)
@@ -97,18 +102,31 @@ def assert_same_ids(
     var lb = b.numels()
     assert_true(la == lb)
     for k in range(la):
-        var va = Int(a[Slicer(), Indexer(k)].item()) if a.rank() == 2 else Int(a[Indexer(k)].item())
-        var vb = Int(b[Slicer(), Indexer(k)].item()) if b.rank() == 2 else Int(b[Indexer(k)].item())
+        var va = Int(a[Slicer(), Indexer(k)].item()) if a.rank() == 2 else Int(
+            a[Indexer(k)].item()
+        )
+        var vb = Int(b[Slicer(), Indexer(k)].item()) if b.rank() == 2 else Int(
+            b[Indexer(k)].item()
+        )
         if va != vb:
             print(
-                "DIVERGED [", case_name, ", seed=", seed, "] at token ",
-                k, ": uncached=", va, " cached=", vb,
+                "DIVERGED [",
+                case_name,
+                ", seed=",
+                seed,
+                "] at token ",
+                k,
+                ": uncached=",
+                va,
+                " cached=",
+                vb,
             )
             assert_true(False)
     print("  ok: ", case_name, " seed=", seed, " (", la, " tokens)")
 
 
 # ---- the four cases ---------------------------------------------------------
+
 
 def test_case_no_eviction() raises:
     # seq_length = 32, generate 20 < 32 tokens: no eviction ever happens.
@@ -128,7 +146,9 @@ def test_case_no_eviction() raises:
     var prompt = make_prompt(5, 256)  # length 5
     for seed in [7, 42]:
         var out_u = model.generate(prompt, 20, init_seed=Optional[Int](seed))
-        var out_c = model.generate_cached(prompt, 20, init_seed=Optional[Int](seed))
+        var out_c = model.generate_cached(
+            prompt, 20, init_seed=Optional[Int](seed)
+        )
         assert_same_ids(out_u, out_c, "no_eviction", seed)
     print("test_case_no_eviction: ok")
 
@@ -148,7 +168,9 @@ def test_case_eviction() raises:
     var prompt = make_prompt(5, 256)
     for seed in [7, 42]:
         var out_u = model.generate(prompt, 40, init_seed=Optional[Int](seed))
-        var out_c = model.generate_cached(prompt, 40, init_seed=Optional[Int](seed))
+        var out_c = model.generate_cached(
+            prompt, 40, init_seed=Optional[Int](seed)
+        )
         assert_same_ids(out_u, out_c, "eviction", seed)
     print("test_case_eviction: ok")
 
@@ -168,7 +190,9 @@ def test_case_prompt_length_1() raises:
     var prompt = make_prompt(1, 256)  # length 1
     for seed in [7, 42]:
         var out_u = model.generate(prompt, 10, init_seed=Optional[Int](seed))
-        var out_c = model.generate_cached(prompt, 10, init_seed=Optional[Int](seed))
+        var out_c = model.generate_cached(
+            prompt, 10, init_seed=Optional[Int](seed)
+        )
         assert_same_ids(out_u, out_c, "prompt_len_1", seed)
     print("test_case_prompt_length_1: ok")
 
@@ -188,7 +212,9 @@ def test_case_prompt_longer_than_window() raises:
     var prompt = make_prompt(48, 256)  # length 48 > seq_length 32
     for seed in [7, 42]:
         var out_u = model.generate(prompt, 10, init_seed=Optional[Int](seed))
-        var out_c = model.generate_cached(prompt, 10, init_seed=Optional[Int](seed))
+        var out_c = model.generate_cached(
+            prompt, 10, init_seed=Optional[Int](seed)
+        )
         assert_same_ids(out_u, out_c, "prompt_gt_window", seed)
     print("test_case_prompt_longer_than_window: ok")
 
