@@ -3,3 +3,4 @@
 !.pixi/config.toml
 chargpt_run.*
 run.*
+run_logs/*.pid
