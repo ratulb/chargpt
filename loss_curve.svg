@@ -1,40 +1,81 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="960" height="520" viewBox="0 0 960 520">
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="546" viewBox="0 0 960 546" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<title>Training and validation loss - chargpt_2026-10-26_10-37-54.log</title>
 <rect width="100%" height="100%" fill="white"/>
-<line x1="70" y1="450.0" x2="890" y2="450.0" stroke="#eee"/>
-<text x="62" y="454.0" text-anchor="end" font-size="11" fill="#555">1.50</text>
-<line x1="70" y1="374.0" x2="890" y2="374.0" stroke="#eee"/>
-<text x="62" y="378.0" text-anchor="end" font-size="11" fill="#555">1.70</text>
-<line x1="70" y1="298.0" x2="890" y2="298.0" stroke="#eee"/>
-<text x="62" y="302.0" text-anchor="end" font-size="11" fill="#555">1.90</text>
-<line x1="70" y1="222.0" x2="890" y2="222.0" stroke="#eee"/>
-<text x="62" y="226.0" text-anchor="end" font-size="11" fill="#555">2.10</text>
-<line x1="70" y1="146.0" x2="890" y2="146.0" stroke="#eee"/>
-<text x="62" y="150.0" text-anchor="end" font-size="11" fill="#555">2.30</text>
-<line x1="70" y1="70.0" x2="890" y2="70.0" stroke="#eee"/>
-<text x="62" y="74.0" text-anchor="end" font-size="11" fill="#555">2.50</text>
-<line x1="70.0" y1="70" x2="70.0" y2="450" stroke="#eee"/>
-<text x="70.0" y="466" text-anchor="middle" font-size="11" fill="#555">0</text>
-<line x1="234.0" y1="70" x2="234.0" y2="450" stroke="#eee"/>
-<text x="234.0" y="466" text-anchor="middle" font-size="11" fill="#555">3000</text>
-<line x1="398.0" y1="70" x2="398.0" y2="450" stroke="#eee"/>
-<text x="398.0" y="466" text-anchor="middle" font-size="11" fill="#555">6000</text>
-<line x1="562.0" y1="70" x2="562.0" y2="450" stroke="#eee"/>
-<text x="562.0" y="466" text-anchor="middle" font-size="11" fill="#555">9000</text>
-<line x1="726.0" y1="70" x2="726.0" y2="450" stroke="#eee"/>
-<text x="726.0" y="466" text-anchor="middle" font-size="11" fill="#555">12000</text>
-<line x1="890.0" y1="70" x2="890.0" y2="450" stroke="#eee"/>
-<text x="890.0" y="466" text-anchor="middle" font-size="11" fill="#555">15000</text>
-
-<line x1="70" y1="450" x2="890" y2="450" stroke="black"/>
-<line x1="70" y1="70" x2="70" y2="450" stroke="black"/>
-<text x="480.0" y="508" text-anchor="middle" font-size="13">training step</text>
-<text x="16" y="260.0" text-anchor="middle" font-size="13" transform="rotate(-90 16 260.0)">loss (nats)</text>
-<text x="480.0" y="24" text-anchor="middle" font-size="15" font-weight="bold">Training and validation loss (zoomed)</text>
-<path d="M 316.0,76.0 L 332.4,90.9 L 348.8,112.9 L 365.2,129.1 L 381.6,146.7 L 398.0,160.5 L 414.4,172.1 L 430.8,184.6 L 447.2,207.9 L 463.6,218.4 L 480.0,231.9 L 496.4,245.2 L 512.8,247.9 L 529.2,278.3 L 545.6,285.5 L 562.0,290.3 L 578.4,302.4 L 594.8,312.6 L 611.2,319.9 L 627.6,331.9 L 644.0,332.0 L 660.4,336.9 L 676.8,345.8 L 693.2,344.3 L 709.6,352.6 L 726.0,366.4 L 742.4,368.9 L 758.8,373.9 L 775.2,371.0 L 791.6,375.5 L 808.0,377.9 L 824.4,374.7 L 840.8,384.4 L 857.2,391.1 L 873.6,396.4 L 890.0,392.8" fill="none" stroke="#1f77b4" stroke-width="2.5"/>
-<path d="M 316.0,77.7 L 332.4,96.4 L 348.8,104.1 L 365.2,123.5 L 381.6,139.5 L 398.0,147.5 L 414.4,166.8 L 430.8,184.9 L 447.2,193.2 L 463.6,206.0 L 480.0,213.1 L 496.4,224.2 L 512.8,240.1 L 529.2,240.8 L 545.6,253.4 L 562.0,257.4 L 578.4,255.8 L 594.8,260.9 L 611.2,271.2 L 627.6,275.7 L 644.0,280.7 L 660.4,291.3 L 676.8,287.7 L 693.2,295.5 L 709.6,303.8 L 726.0,309.9 L 742.4,313.8 L 758.8,304.6 L 775.2,310.2 L 791.6,307.5 L 808.0,320.3 L 824.4,320.0 L 840.8,326.2 L 857.2,327.8 L 873.6,337.4 L 890.0,329.3" fill="none" stroke="#d62728" stroke-width="2.5"/>
-<rect x="790" y="40" width="150" height="56" fill="white" stroke="#ccc"/>
-<line x1="800" y1="58" x2="830" y2="58" stroke="#1f77b4" stroke-width="2.5"/>
-<text x="840" y="62" font-size="12" fill="#333">train loss</text>
-<line x1="800" y1="80" x2="830" y2="80" stroke="#d62728" stroke-width="2.5"/>
-<text x="840" y="84" font-size="12" fill="#333">val loss</text>
+<text x="480.0" y="30" text-anchor="middle" font-size="18" font-weight="bold" fill="#222">Training and validation loss (zoomed)</text>
+<text x="480.0" y="50" text-anchor="middle" font-size="12" fill="#666">6 layers, 6 heads, 192-dim  |  batch 16 x seq 32  |  lr 0.001  |  dropout 0.1</text>
+<text x="480.0" y="68" text-anchor="middle" font-size="11" fill="#999">chargpt_2026-10-26_10-37-54.log</text>
+<line x1="74" y1="450.0" x2="874" y2="450.0" stroke="#ececec"/>
+<text x="66" y="454.0" text-anchor="end" font-size="11" fill="#555">1.4</text>
+<line x1="74" y1="389.0" x2="874" y2="389.0" stroke="#ececec"/>
+<text x="66" y="393.0" text-anchor="end" font-size="11" fill="#555">1.6</text>
+<line x1="74" y1="328.0" x2="874" y2="328.0" stroke="#ececec"/>
+<text x="66" y="332.0" text-anchor="end" font-size="11" fill="#555">1.8</text>
+<line x1="74" y1="267.0" x2="874" y2="267.0" stroke="#ececec"/>
+<text x="66" y="271.0" text-anchor="end" font-size="11" fill="#555">2.0</text>
+<line x1="74" y1="206.0" x2="874" y2="206.0" stroke="#ececec"/>
+<text x="66" y="210.0" text-anchor="end" font-size="11" fill="#555">2.2</text>
+<line x1="74" y1="145.0" x2="874" y2="145.0" stroke="#ececec"/>
+<text x="66" y="149.0" text-anchor="end" font-size="11" fill="#555">2.4</text>
+<line x1="74" y1="84.0" x2="874" y2="84.0" stroke="#ececec"/>
+<text x="66" y="88.0" text-anchor="end" font-size="11" fill="#555">2.6</text>
+<line x1="74.0" y1="84" x2="74.0" y2="450" stroke="#ececec"/>
+<text x="74.0" y="468" text-anchor="middle" font-size="11" fill="#555">0</text>
+<line x1="234.0" y1="84" x2="234.0" y2="450" stroke="#ececec"/>
+<text x="234.0" y="468" text-anchor="middle" font-size="11" fill="#555">1000</text>
+<line x1="394.0" y1="84" x2="394.0" y2="450" stroke="#ececec"/>
+<text x="394.0" y="468" text-anchor="middle" font-size="11" fill="#555">2000</text>
+<line x1="554.0" y1="84" x2="554.0" y2="450" stroke="#ececec"/>
+<text x="554.0" y="468" text-anchor="middle" font-size="11" fill="#555">3000</text>
+<line x1="714.0" y1="84" x2="714.0" y2="450" stroke="#ececec"/>
+<text x="714.0" y="468" text-anchor="middle" font-size="11" fill="#555">4000</text>
+<line x1="874.0" y1="84" x2="874.0" y2="450" stroke="#ececec"/>
+<text x="874.0" y="468" text-anchor="middle" font-size="11" fill="#555">5000</text>
+<line x1="74" y1="450" x2="874" y2="450" stroke="#333"/>
+<line x1="74" y1="84" x2="74" y2="450" stroke="#333"/>
+<text x="474.0" y="492" text-anchor="middle" font-size="13" fill="#222">training step</text>
+<text x="18" y="267.0" text-anchor="middle" font-size="13" fill="#222" transform="rotate(-90 18 267.0)">loss (nats)</text>
+<path d="M 122.0,120.0 L 170.0,188.9 L 218.0,235.2 L 266.0,274.2 L 314.0,297.7 L 362.0,324.2 L 410.0,339.0 L 458.0,354.9 L 506.0,363.4 L 554.0,368.2 L 602.0,378.1 L 650.0,376.8 L 698.0,389.7 L 746.0,395.4 L 794.0,402.7 L 842.0,401.9" fill="none" stroke="#1f77b4" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M 122.0,120.9 L 170.0,189.2 L 218.0,226.4 L 266.0,244.1 L 314.0,264.0 L 362.0,287.1 L 410.0,291.5 L 458.0,310.0 L 506.0,317.4 L 554.0,315.7 L 602.0,330.6 L 650.0,336.2 L 698.0,339.0 L 746.0,337.6 L 794.0,348.8 L 842.0,348.1" fill="none" stroke="#d62728" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="122.0" cy="120.0" r="3" fill="white" stroke="#1f77b4" stroke-width="1.5"><title>step 300: train 2.4819</title></circle>
+<circle cx="122.0" cy="120.9" r="3" fill="white" stroke="#d62728" stroke-width="1.5"><title>step 300: val 2.4791</title></circle>
+<circle cx="170.0" cy="188.9" r="3" fill="white" stroke="#1f77b4" stroke-width="1.5"><title>step 600: train 2.2562</title></circle>
+<circle cx="170.0" cy="189.2" r="3" fill="white" stroke="#d62728" stroke-width="1.5"><title>step 600: val 2.2552</title></circle>
+<circle cx="218.0" cy="235.2" r="3" fill="white" stroke="#1f77b4" stroke-width="1.5"><title>step 900: train 2.1044</title></circle>
+<circle cx="218.0" cy="226.4" r="3" fill="white" stroke="#d62728" stroke-width="1.5"><title>step 900: val 2.1332</title></circle>
+<circle cx="266.0" cy="274.2" r="3" fill="white" stroke="#1f77b4" stroke-width="1.5"><title>step 1200: train 1.9763</title></circle>
+<circle cx="266.0" cy="244.1" r="3" fill="white" stroke="#d62728" stroke-width="1.5"><title>step 1200: val 2.0752</title></circle>
+<circle cx="314.0" cy="297.7" r="3" fill="white" stroke="#1f77b4" stroke-width="1.5"><title>step 1500: train 1.8992</title></circle>
+<circle cx="314.0" cy="264.0" r="3" fill="white" stroke="#d62728" stroke-width="1.5"><title>step 1500: val 2.0098</title></circle>
+<circle cx="362.0" cy="324.2" r="3" fill="white" stroke="#1f77b4" stroke-width="1.5"><title>step 1800: train 1.8125</title></circle>
+<circle cx="362.0" cy="287.1" r="3" fill="white" stroke="#d62728" stroke-width="1.5"><title>step 1800: val 1.9341</title></circle>
+<circle cx="410.0" cy="339.0" r="3" fill="white" stroke="#1f77b4" stroke-width="1.5"><title>step 2100: train 1.7640</title></circle>
+<circle cx="410.0" cy="291.5" r="3" fill="white" stroke="#d62728" stroke-width="1.5"><title>step 2100: val 1.9197</title></circle>
+<circle cx="458.0" cy="354.9" r="3" fill="white" stroke="#1f77b4" stroke-width="1.5"><title>step 2400: train 1.7120</title></circle>
+<circle cx="458.0" cy="310.0" r="3" fill="white" stroke="#d62728" stroke-width="1.5"><title>step 2400: val 1.8589</title></circle>
+<circle cx="506.0" cy="363.4" r="3" fill="white" stroke="#1f77b4" stroke-width="1.5"><title>step 2700: train 1.6839</title></circle>
+<circle cx="506.0" cy="317.4" r="3" fill="white" stroke="#d62728" stroke-width="1.5"><title>step 2700: val 1.8348</title></circle>
+<circle cx="554.0" cy="368.2" r="3" fill="white" stroke="#1f77b4" stroke-width="1.5"><title>step 3000: train 1.6682</title></circle>
+<circle cx="554.0" cy="315.7" r="3" fill="white" stroke="#d62728" stroke-width="1.5"><title>step 3000: val 1.8404</title></circle>
+<circle cx="602.0" cy="378.1" r="3" fill="white" stroke="#1f77b4" stroke-width="1.5"><title>step 3300: train 1.6357</title></circle>
+<circle cx="602.0" cy="330.6" r="3" fill="white" stroke="#d62728" stroke-width="1.5"><title>step 3300: val 1.7914</title></circle>
+<circle cx="650.0" cy="376.8" r="3" fill="white" stroke="#1f77b4" stroke-width="1.5"><title>step 3600: train 1.6401</title></circle>
+<circle cx="650.0" cy="336.2" r="3" fill="white" stroke="#d62728" stroke-width="1.5"><title>step 3600: val 1.7732</title></circle>
+<circle cx="698.0" cy="389.7" r="3" fill="white" stroke="#1f77b4" stroke-width="1.5"><title>step 3900: train 1.5978</title></circle>
+<circle cx="698.0" cy="339.0" r="3" fill="white" stroke="#d62728" stroke-width="1.5"><title>step 3900: val 1.7640</title></circle>
+<circle cx="746.0" cy="395.4" r="3" fill="white" stroke="#1f77b4" stroke-width="1.5"><title>step 4200: train 1.5789</title></circle>
+<circle cx="746.0" cy="337.6" r="3" fill="white" stroke="#d62728" stroke-width="1.5"><title>step 4200: val 1.7684</title></circle>
+<circle cx="794.0" cy="402.7" r="3" fill="white" stroke="#1f77b4" stroke-width="1.5"><title>step 4500: train 1.5550</title></circle>
+<circle cx="794.0" cy="348.8" r="3" fill="white" stroke="#d62728" stroke-width="1.5"><title>step 4500: val 1.7319</title></circle>
+<circle cx="842.0" cy="401.9" r="3" fill="white" stroke="#1f77b4" stroke-width="1.5"><title>step 4800: train 1.5576</title></circle>
+<circle cx="842.0" cy="348.1" r="3" fill="white" stroke="#d62728" stroke-width="1.5"><title>step 4800: val 1.7341</title></circle>
+<circle cx="794.0" cy="348.8" r="7" fill="none" stroke="#d62728" stroke-width="1.5" stroke-dasharray="3 2"><title>best val 1.7319 at step 4500</title></circle>
+<text x="852.0" y="405.9" font-size="12" font-weight="bold" fill="#1f77b4">1.558</text>
+<text x="852.0" y="352.1" font-size="12" font-weight="bold" fill="#d62728">1.734</text>
+<rect x="724" y="96" width="140" height="52" rx="4" fill="white" fill-opacity="0.92" stroke="#ccc"/>
+<line x1="734" y1="116" x2="762" y2="116" stroke="#1f77b4" stroke-width="2.5"/>
+<text x="770" y="120" font-size="12" fill="#333">train loss</text>
+<line x1="734" y1="136" x2="762" y2="136" stroke="#d62728" stroke-width="2.5"/>
+<text x="770" y="140" font-size="12" fill="#333">val loss</text>
+<text x="480.0" y="528" text-anchor="middle" font-size="12" fill="#444">final (step 4800): train 1.558, val 1.734   |   best val 1.732 @ step 4500   |   gap +0.176   |   wall clock 1h 10m 00s</text>
+<text x="480.0" y="542" text-anchor="middle" font-size="10" fill="#aaa">dashed ring = best validation loss</text>
 </svg>

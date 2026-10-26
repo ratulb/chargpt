@@ -1,0 +1,70 @@
+#!/bin/sh
+# run_chargpt.sh - start a Mojo script in the background with a timestamped log.
+#
+# Usage:
+#   ./run_chargpt.sh                          # runs chargpt.mojo
+#   ./run_chargpt.sh max_iters=5000           # extra args go to the program
+#   ./run_chargpt.sh other.mojo lr=0.001      # first arg ending in .mojo = target
+#
+# Each run creates, inside ./run_logs/ (next to this script):
+#   <name>_<YYYY-MM-DD_HH-MM-SS>.log   output (stdout + stderr)
+#   <name>_<YYYY-MM-DD_HH-MM-SS>.pid   process id
+#   <name>_latest.log                  symlink to the newest log (best effort)
+#
+# Works with any POSIX sh on Linux and macOS. On Windows use WSL or Git Bash.
+
+set -eu
+
+# Always work relative to the script's own folder, wherever it is called from.
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+cd "$SCRIPT_DIR"
+
+# Optional first argument: the .mojo file to run (default chargpt.mojo).
+TARGET="chargpt.mojo"
+case "${1:-}" in
+    *.mojo) TARGET="$1"; shift ;;
+esac
+
+if [ ! -f "$TARGET" ]; then
+    echo "error: $TARGET not found in $SCRIPT_DIR" >&2
+    exit 1
+fi
+if ! command -v mojo >/dev/null 2>&1; then
+    echo "error: 'mojo' not found on PATH (activate your environment first)" >&2
+    exit 1
+fi
+
+NAME=$(basename "$TARGET" .mojo)
+LOG_DIR="run_logs"
+mkdir -p "$LOG_DIR"
+
+# Filename-safe human readable timestamp, e.g. 2026-10-26_16-03-45
+STAMP=$(date '+%Y-%m-%d_%H-%M-%S')
+LOG="$LOG_DIR/${NAME}_${STAMP}.log"
+PID_FILE="$LOG_DIR/${NAME}_${STAMP}.pid"
+
+# Header inside the log, so the file itself says when and how it started.
+{
+    echo "=== Run started: $(date '+%Y-%m-%d %H:%M:%S %Z') ==="
+    echo "=== Command: mojo $TARGET $* ==="
+    echo "=== Host: $(uname -srm) ==="
+    echo
+} > "$LOG"
+
+# Detach from the terminal. setsid is not available on macOS, so fall back
+# to plain nohup there.
+if command -v setsid >/dev/null 2>&1; then
+    setsid nohup mojo "$TARGET" "$@" >> "$LOG" 2>&1 < /dev/null &
+else
+    nohup mojo "$TARGET" "$@" >> "$LOG" 2>&1 < /dev/null &
+fi
+echo $! > "$PID_FILE"
+
+# Convenience pointer to the newest log; ignore failure (e.g. no symlinks).
+ln -sf "${NAME}_${STAMP}.log" "$LOG_DIR/${NAME}_latest.log" 2>/dev/null || true
+
+echo "Started $TARGET (pid $(cat "$PID_FILE"))"
+echo "  log: $SCRIPT_DIR/$LOG"
+echo "  pid: $SCRIPT_DIR/$PID_FILE"
+echo "Follow with: tail -f $LOG_DIR/${NAME}_latest.log"
+echo "Stop with:   kill \$(cat $PID_FILE)"
