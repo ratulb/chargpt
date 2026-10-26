@@ -177,29 +177,56 @@ struct TinyShakespeare:
     """
     TinyShakespeare: the training text
     About 1 MB of Shakespeare plays (the file from Karpathy's char-rnn repo).
-    It is downloaded with `wget` the first time and cached in /tmp.
+    It is downloaded with `wget` (or `curl` if wget is missing) the first
+    time and cached in /tmp.
     """
+
+    @staticmethod
+    def run_downloader(tool: String, var args: List[String]) -> Bool:
+        """Run a downloader; True only if the cached file exists afterwards.
+        A missing binary or a failed run is treated as 'not downloaded'."""
+        try:
+            var process = Process.run(tool, args^)
+            _ = process.wait()
+        except:
+            return False
+        var path = Path(input_file)
+        return path.exists() and path.is_file()
 
     @staticmethod
     def text() raises -> String:
         var path = Path(input_file)
-        # Download only if the cached copy is missing.
         if not path.exists() or not path.is_file():
             print("Downloading tiny shakespeare (~1MB)...")
-            # Equivalent to: wget -P /tmp <download_url>
-            # (-P sets the directory the file is saved into.)
-            var args = List[String]()
-            args.append("-P")
-            args.append("/tmp")
-            args.append(download_url)
-            var process = Process.run("wget", args^)
-            _ = process.wait()
+
+            # Try with wget: wget -P /tmp <download_url>
+            var wget_args = List[String]()
+            wget_args.append("-P")
+            wget_args.append("/tmp")
+            wget_args.append(download_url)
+            var ok = Self.run_downloader("wget", wget_args^)
+
+            # Fallback: curl -fsSL -o <input_file> <download_url>
+            #   -f  fail on HTTP errors instead of saving the error page
+            #   -s  silent, -S show errors anyway, -L follow redirects
+            if not ok:
+                print("wget unavailable or failed, trying curl...")
+                var curl_args = List[String]()
+                curl_args.append("-fsSL")
+                curl_args.append("-o")
+                curl_args.append(input_file)
+                curl_args.append(download_url)
+                ok = Self.run_downloader("curl", curl_args^)
+
+            if not ok:
+                raise Error(
+                    "Could not download tiny shakespeare. Install wget or"
+                    " curl, or place the file at "
+                    + input_file
+                )
             print("Tiny shakespeare downloaded")
 
         var content = path.read_text()
-        # Three ways to count the same text. For plain ASCII all
-        # three are equal; they differ for accented letters or emoji, which
-        # take several bytes, or several code points, each.
         print("Total bytes: ", content.byte_length())
         print("Total code points: ", content.count_codepoints())
         print("Total graphemes: ", content.count_graphemes())
