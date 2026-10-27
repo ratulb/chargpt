@@ -1,0 +1,20 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          pixi-version: latest
+      - name: test_kvcache
+        run: pixi run mojo -I . tests/test_kvcache.mojo
+      - name: test_attn_cache
+        run: pixi run mojo -I . tests/test_attn_cache.mojo
+      - name: test_cached_vs_uncached
+        run: pixi run mojo -I . tests/test_cached_vs_uncached.mojo
