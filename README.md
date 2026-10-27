@@ -79,8 +79,6 @@ python3 plot_loss.py --log             # loss_curve_log.svg: log scale, includes
 python3 plot_loss.py LOG --table 900   # markdown table of losses every 900 steps
 ```
 
-Timestamps in the log header and file name are the machine's local time, which on a cloud VM is usually UTC.
-
 ## How the text improves
 
 The model's output changes character as training proceeds, and the *order* in which capabilities appear is the most interesting thing this project shows. A sample is printed every 300 steps; here is the progression from the default run. Each sample is a single draw (temperature 0.8, top-k 50) that starts from a random 5-character prompt taken from the validation text, and the prompt is part of the printed text, which is why most samples begin mid-word. Read them as illustrations, not measurements. Each is the only sample the run printed at that step: the steps were picked to show the progression, the samples were not selected.
