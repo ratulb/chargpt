@@ -1,6 +1,6 @@
 # chargpt
 
-A tiny character-level GPT in Mojo (CPU): KV-cached decoding with temperature/top-k sampling.
+A tiny character-level GPT in Mojo (CPU): KV-cached decoding, correct inside and past the window.
 
 [Quick start](#quick-start) · [How the text improves](#how-the-text-improves) · [Results](#results) · [The key-value cache](#the-key-value-cache) · [How it works](#how-it-works) · [Tests](#tests) · [Arguments](#command-line-arguments)
 
@@ -39,8 +39,6 @@ To beggars, and the
 | Training | 10,000 steps of 32 windows × 96 characters (about 27.5 passes over the text), AdamW at 1e-3, dropout 0.1 |
 | Result | validation loss 1.49 nats at its best, at step 5,400; 1.55 at the end, where the model has begun to overfit. The bigram baseline reaches 2.49 |
 
-
-
 ## Quick start
 
 You need:
@@ -48,7 +46,6 @@ You need:
 - [Mojo](https://docs.modular.com/mojo/manual/) 1.1.0, set up with [pixi](https://pixi.sh).
 - `wget` or `curl`, used once to fetch the 1 MB text to `/tmp/input.txt`.
 - Linux x86-64, which is what Tenmo and mbpe currently support.
-
 
 ```bash
 git clone https://github.com/ratulb/chargpt
@@ -58,11 +55,13 @@ mojo bigram.mojo        # stage 1: the baseline
 mojo chargpt.mojo       # stage 2: the transformer, default settings
 ```
 
-The defaults take about 8.5 hours on an AMD EPYC 7B13 (4 cores, 16 GB). Validation loss bottoms out near step 5,400, so `max_iters=6000` finishes in about 5 hours and gives up almost nothing (1.50 at step 6,000). For a quicker look, shrink the context and the model:
+The defaults take about 8.5 hours on an AMD EPYC 7B13 (4 cores, 16 GB). Validation loss bottoms out near step 5,400, so `max_iters=6000` finishes in about 5 hours and gives up almost nothing (about 1.50 to 1.52 at step 6,000). For a quicker look, shrink the context and the model:
 
 ```bash
 mojo chargpt.mojo batch_size=16 seq_length=32 n_embd=192 max_iters=5000   # about 1 h 10 min, validation loss near 1.73
 ```
+
+Built against the Tenmo commit and mbpe version pinned in `pixi.toml`/`pixi.lock` (Tenmo `d297858`, mbpe `0.1.1`).
 
 Settings are `key=value` arguments with no spaces around the `=`; see [Command-line arguments](#command-line-arguments).
 
@@ -80,7 +79,7 @@ python3 plot_loss.py                   # loss_curve.svg from the newest log (wor
 
 The model's output changes character as training proceeds, and the *order* in which capabilities appear is the most interesting thing this project shows. A sample is printed every 300 steps; here is the progression from the default run. Each sample is a single draw (temperature 0.8, top-k 50) that starts from a random 5-character prompt taken from the validation text, and the prompt is part of the printed text, which is why most samples begin mid-word.
 
-**Step 0, validation loss 7.06.** Before any training the model has no idea which characters exist. It spreads its guesses over all 256 byte values, so the output is noise with stray non-ASCII symbols (`Ƶ`, `Ƒ`, `ϋ`, `Д`, `ŵ`).
+**Step 0, validation loss 7.06.** Before any training the model has no idea which characters exist. It makes near-random guesses over the 256 byte values, so the output is noise with stray non-ASCII symbols (`Ƶ`, `Ƒ`, `ϋ`, `Д`, `ŵ`).
 
 ```text
 RRWhLX.ƵWƑ..gXX~ϋX~F.W#.LLR\,Д~Vi#@W#W!ŵ\\RFhWWx+
@@ -137,13 +136,13 @@ We should have say for thy house thou, thou strike,
 A marge witness thou
 ```
 
-**Step 10,000, validation loss 1.55.** This is the sample at the top of the page. Speaker names alternate (`KING EDWARD IV:`, `CORIOLANUS:`), most words are real and short phrases hold together (`the common people`, `if I be consul`), but invented words remain (`perison`, `semularies`, `cardon`) and the lines do not add up to a scene. Next to the step-3,000 sample it is not obviously better, and the loss agrees: 1.55 at step 3,000 and 1.55 at the end.
+**Final sample (last evaluation, step 9,900: 1.55).** This is the sample at the top of the page. Speaker names alternate (`KING EDWARD IV:`, `CORIOLANUS:`), most words are real and short phrases hold together (`the common people`, `if I be consul`), but invented words remain (`perison`, `semularies`, `cardon`) and the lines do not add up to a scene. Next to the step-3,000 sample it is not obviously better, and the loss agrees: 1.55 at step 3,000 and 1.55 at the end.
 
-It still invents words at every stage. But the progression from layout without vocabulary, to vocabulary without grammar, to grammar without coherence is visible. And it stops: the samples stop improving at about the point where the validation loss does.
+It still invents words at every stage. But the progression from layout without vocabulary, to vocabulary without grammar, to grammar without coherence is visible. The step-3,000 and final samples are hard to tell apart, which is consistent with the flat loss.
 
 ## Results
 
-Losses are in nats per character. Each reading averages 50 random batches.
+Losses are in nats per character. Each reading averages 50 random batches per split.
 
 ### The default run
 
@@ -174,12 +173,11 @@ Training loss falls throughout, from 2.22 at step 300 to 1.07 at step 9,900. Val
 
 That is overfitting. The run makes about 27 passes over a 1.1 MB text, and a 4.3M-parameter model with dropout at 0.1 has started to memorise it. This project does not yet stop early or keep the best checkpoint.
 
-
 The full log of this run is [`run_logs/default-10k.log`](run_logs/default-10k.log).
 
 ### What it costs
 
-From the end of the log, measured on an AMD EPYC 7B13 (4 cores, 16 GB) (Linux 6.12, x86-64):
+From the end of the log, measured on an AMD EPYC 7B13 (4 cores, 16 GB, Linux 6.12, x86-64):
 
 ```text
   training (pure)  : 8h 01m 45s
@@ -190,9 +188,9 @@ From the end of the log, measured on an AMD EPYC 7B13 (4 cores, 16 GB) (Linux 6.
   total wall clock : 8h 33m 49s
 ```
 
-Training is 94% of the wall clock, and the step time stays between 2.85 and 2.96 s throughout. Each evaluation (100 batches, dropout off) takes about 47 seconds and a 500-character sample about 9. Most of every sample is generated on the rebuild path described [below](#the-key-value-cache), which is why the 9 seconds does not change.
+Training is 94% of the wall clock, and the step time stays between 2.85 and 2.96 s throughout. Each evaluation (50 batches per split, dropout off) takes about 47 seconds and a 500-character sample about 9. Most of every sample is generated on the rebuild path described [below](#the-key-value-cache), which is why the cache saves little in these samples.
 
-### Context matters more than size
+### Context seems to matter more than size
 
 | Run | Context | Parameters (hand count) | Steps | Val loss |
 | --- | ---: | ---: | ---: | ---: |
@@ -219,7 +217,7 @@ The nanoGPT figure comes from a 10.7M-parameter model with a 256-character conte
 
 **The starting loss.** A model that knows nothing about the data scores ln 256 ≈ 5.55. A randomly initialised network starts above that, because its logits are not uniform: they have a spread, and confident wrong guesses are expensive. As a rough rule the penalty is about half the logit variance on top of ln V. This run started at 7.05 train and 7.06 validation; other configurations logged for this project started between about 6.5 and 7.1. Train and validation agree at that point, which is what a healthy start looks like. A starting loss far outside that band, or train and validation far apart, would point at a broken initialisation or forward pass.
 
-**Train against validation.** Watch the two together. Both falling together means the model is learning the language. Validation stalling or rising while train keeps falling means it is starting to memorise the training text, as it does here after about step 5,400. The validation set is the last 10% of the file, which holds different plays from the training set, so part of any gap can be distribution shift, not only overfitting.
+**Train against validation.** Watch the two together. Both falling together means the model is learning the language. Validation stalling or rising while train keeps falling means it is starting to memorise the training text, as it does here after about step 5,400. The validation set is the last 10% of the file, which holds likely different plays from the training set, so part of any gap can be distribution shift, not only overfitting.
 
 ## The key-value cache
 
@@ -239,7 +237,7 @@ The first version evicted the oldest entry when the window filled and shifted th
 
 So once the window is full, `generate_cached` resets every cache and re-prefills the last `seq_length` characters on each step. That is exactly what the uncached path computes, and the two agree. The price is that the cache is thrown away at every step from then on.
 
-A relative-position scheme (RoPE, ALiBi) would remove the first problem but not the second. RoPE rotates each key and value by an angle proportional to its position, so a uniform shift of the window leaves the relative angles unchanged and the cached entries stay valid at their new slots. But the content of a cached entry depends on which layer it came from. Layer 0's entry at position p is computed from the token at p and its position embedding alone. A layer-1 entry at p is computed from layer 0's attention output at p, which is a weighted sum over positions 0..p — so it encodes the content of every token up to p, including ones that may since have left the window. Deeper layers inherit this. The entry count is the same at every layer (seq_length keys and seq_length values per position); what differs is what each entry was computed from. After a slide, a fresh forward pass over the window never saw the evicted tokens, so its entry for the same slot at layer 1 or later is different. The first problem is about positions; the second is about the path the information took to get into the cache. RoPE fixes the first; nothing fixes the second except recomputing from a window that matches what the model would see fresh.
+A relative-position scheme (RoPE, ALiBi) would remove the first problem but not the second. RoPE rotates each key and value by an angle proportional to its position, so a uniform shift of the window leaves the relative angles unchanged and the cached entries stay valid at their new slots. But the content of a cached entry depends on which layer it came from. Layer 0's entry at position p is computed from the token at p and its position embedding alone. A layer-1 entry at p is computed from layer 0's attention output at p, which is a weighted sum over positions 0..p — so it encodes the content of every token up to p, including ones that may since have left the window. Deeper layers inherit this. After a slide, a fresh forward pass over the window never saw the evicted tokens, so its entry for the same slot at layer 1 or later is different. RoPE fixes the first; nothing fixes the second except recomputing from a window that matches what the model would see fresh.
 
 ### What it buys
 
@@ -297,7 +295,9 @@ chargpt/
 ├── run_chargpt.sh      background run with a timestamped log in run_logs/
 ├── plot_loss.py        loss_curve.svg and result tables from a log
 ├── loss_curve.svg
-├── loss_curve_log.svg
+├── run_logs/
+│   └── default-10k.log
+├── LICENSE
 └── tests/
     ├── test_kvcache.mojo
     ├── test_attn_cache.mojo
@@ -383,6 +383,7 @@ Things to know:
 
 - A misspelled key is **ignored silently**, and a value that is not a number falls back to the default. Check the `Hyper params:` line printed at the start to see what was actually used.
 - If a key appears twice, the first one wins.
+- `init_seed` is an argument of `generate`/`generate_cached`, not a command-line setting; it makes a whole generation reproducible.
 - Each step sees `batch_size × seq_length` characters, so the defaults see 3,072 per step and about 30.7 million over 10,000 steps: roughly 27.5 passes over the 1.1 million characters of text.
 - Runs are not reproducible by default: training windows and sampling draw fresh entropy. Passing `init_seed` makes generation reproducible, but training is not seeded.
 
