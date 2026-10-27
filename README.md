@@ -1,6 +1,6 @@
 # chargpt
 
-A character-level GPT in Mojo, trained on CPU and readable from tokenizer to training step.
+A tiny character-level GPT in Mojo (CPU): KV-cached decoding with temperature/top-k sampling.
 
 [Quick start](#quick-start) · [How the text improves](#how-the-text-improves) · [Results](#results) · [The key-value cache](#the-key-value-cache) · [How it works](#how-it-works) · [Tests](#tests) · [Arguments](#command-line-arguments)
 
