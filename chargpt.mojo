@@ -818,7 +818,7 @@ struct CharGPT:
         var made = 1
         if end_id >= 0 and next_id == end_id:
             self.train()
-            return Self.ids_to_tensor(ids)
+            return Tensor[INT].d1(ids)
 
         # ---- Decode ------------------------------------------------------
         while made < max_new_tokens:
@@ -868,7 +868,7 @@ struct CharGPT:
                 break
 
         self.train()
-        return Self.ids_to_tensor(ids)
+        return Tensor[INT].d1(ids)
 
     @staticmethod
     def ids_to_tensor(ids: List[Int]) raises -> Tensor[INT]:
@@ -990,6 +990,7 @@ def generate_text(
     temperature: Float32 = 0.8,
     top_k: Int = 50,
     init_seed: Optional[Int] = None,
+    use_cache: Bool = True,
 ) raises:
     """
     Show what the model has learned so far.
@@ -1002,18 +1003,29 @@ def generate_text(
     # Get a random single batch from validation data with 5 char sequence
     var rand_batch = dataset.random_batch("val", 1, 5)  # tuple of tensors
     var rand_context = rand_batch[0]
-    var generated = model.generate_cached(
-        rand_context,
-        max_new_tokens=max_new_tokens,
-        temperature=temperature,
-        top_k=top_k,
-        init_seed=init_seed,
-    )
+    var generated: Tensor[INT]
+    if use_cache:
+        generated = model.generate_cached(
+            rand_context,
+            max_new_tokens=max_new_tokens,
+            temperature=temperature,
+            top_k=top_k,
+            init_seed=init_seed,
+        )
+    else:
+        generated = model.generate(
+            rand_context,
+            max_new_tokens=max_new_tokens,
+            temperature=temperature,
+            top_k=top_k,
+            init_seed=init_seed,
+        )
     # Row 0 of the (T+max_new_tokens) result, turned back into text.
     var tokens = generated.tolist()
     var text = tokenizer.decode(tokens)
     print(text)
     model.train()
+
 
 
 comptime current_time = lambda () -> Float64: Float64(now())
@@ -1098,7 +1110,7 @@ def main() raises:
     )
 
     t = current_time()
-    generate_text(tokenizer, model, dataset, h_params.max_new_tokens)
+    generate_text(tokenizer, model, dataset, h_params.max_new_tokens, use_cache=h_params.kv_cache)
     dt = since(t)
     gen_secs_total += dt
     log_stage("sample generation", dt)
@@ -1145,7 +1157,7 @@ def main() raises:
             print(line)
 
             var t_gen = current_time()
-            generate_text(tokenizer, model, dataset, h_params.max_new_tokens)
+            generate_text(tokenizer, model, dataset, h_params.max_new_tokens, use_cache=h_params.kv_cache)
             var gen_dt = since(t_gen)
             gen_secs_total += gen_dt
             log_stage("sample generation", gen_dt)
@@ -1175,7 +1187,7 @@ def main() raises:
     print("[6/6] Final sample from the trained model")
     model.eval()
     t = current_time()
-    generate_text(tokenizer, model, dataset, h_params.max_new_tokens)
+    generate_text(tokenizer, model, dataset, h_params.max_new_tokens, use_cache=h_params.kv_cache)
     dt = since(t)
     gen_secs_total += dt
     log_stage("sample generation", dt)

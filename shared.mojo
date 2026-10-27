@@ -154,11 +154,16 @@ struct CmdLineArgs(ImplicitlyCopyable, Writable):
             Self.to_dtype(arguments["drop_ratio"], drop_ratio) if "drop_ratio"
             in arguments else drop_ratio
         )
-        self.kv_cache = (
-            arguments.get("kv_cache")
-            .map(lambda (v: String) -> Bool: Bool(v))
-            .or_else(kv_cache)
-        )
+        if "kv_cache" in arguments:
+            var v = arguments["kv_cache"].lower()
+            if v == "true" or v == "1" or v == "yes" or v == "on":
+                self.kv_cache = True
+            elif v == "false" or v == "0" or v == "no" or v == "off":
+                self.kv_cache = False
+            else:
+                self.kv_cache = kv_cache
+        else:
+            self.kv_cache = kv_cache
 
     @staticmethod
     def to_dtype[

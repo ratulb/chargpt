@@ -377,6 +377,7 @@ Every setting can be overridden as `key=value`. They are runtime arguments on pu
 | `max_new_tokens` | 500 | Length of each sample |
 | `learning_rate` | 1e-3 | AdamW step size, constant (no schedule) |
 | `drop_ratio` | 0.1 | Dropout probability on the attention weights and MLP outputs (0.0 = off) |
+| `kv_cache` | true | Use the key-value cache when generating samples (false uses the plain path) |
 
 Things to know:
 
