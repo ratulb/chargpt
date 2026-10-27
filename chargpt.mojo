@@ -1027,7 +1027,6 @@ def generate_text(
     model.train()
 
 
-
 comptime current_time = lambda () -> Float64: Float64(now())
 
 
@@ -1110,7 +1109,13 @@ def main() raises:
     )
 
     t = current_time()
-    generate_text(tokenizer, model, dataset, h_params.max_new_tokens, use_cache=h_params.kv_cache)
+    generate_text(
+        tokenizer,
+        model,
+        dataset,
+        h_params.max_new_tokens,
+        use_cache=h_params.kv_cache,
+    )
     dt = since(t)
     gen_secs_total += dt
     log_stage("sample generation", dt)
@@ -1157,7 +1162,13 @@ def main() raises:
             print(line)
 
             var t_gen = current_time()
-            generate_text(tokenizer, model, dataset, h_params.max_new_tokens, use_cache=h_params.kv_cache)
+            generate_text(
+                tokenizer,
+                model,
+                dataset,
+                h_params.max_new_tokens,
+                use_cache=h_params.kv_cache,
+            )
             var gen_dt = since(t_gen)
             gen_secs_total += gen_dt
             log_stage("sample generation", gen_dt)
@@ -1187,7 +1198,13 @@ def main() raises:
     print("[6/6] Final sample from the trained model")
     model.eval()
     t = current_time()
-    generate_text(tokenizer, model, dataset, h_params.max_new_tokens, use_cache=h_params.kv_cache)
+    generate_text(
+        tokenizer,
+        model,
+        dataset,
+        h_params.max_new_tokens,
+        use_cache=h_params.kv_cache,
+    )
     dt = since(t)
     gen_secs_total += dt
     log_stage("sample generation", dt)

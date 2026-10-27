@@ -166,9 +166,7 @@ struct BigramModel:
             # next_id's shape (B, 1)
             # `multinomial` draws one id according to those probabilities.
             # `multinomial` uses 42 as default seed! Pass a random one
-            var next_id = probas.multinomial[index_dtype=INT](
-                init_seed=None
-            )
+            var next_id = probas.multinomial[index_dtype=INT](init_seed=None)
             # Append sampled token to the running sequence.
             appended = Tensor[INT].concat[track_grad=False](
                 [appended, next_id], axis=1
