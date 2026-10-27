@@ -183,7 +183,7 @@ The full log of this run is [`run_logs/default-10k.log`](run_logs/default-10k.lo
 ### What it costs
 
 From the end of the log, measured on an AMD EPYC 7B13 (4 cores, 16 GB)
- (the log header reports Linux 6.12, x86-64):
+ (debian-13-trixie):
 
 ```text
   training (pure)  : 8h 01m 45s
