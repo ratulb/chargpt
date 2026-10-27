@@ -40,7 +40,7 @@ struct CmdLineArgs(ImplicitlyCopyable, Writable):
     n_layer          number of transformer blocks
     learning_rate    AdamW step size
     drop_ratio       dropout probability (0.0 = off)
-
+    kv_cache         whether to use KVCache, default True, False -> kv_cache=
     `ImplicitlyCopyable` lets a CmdLineArgs be passed around by value without
     an explicit copy; `Writable` lets `print(h_params)` show every field.
 
@@ -57,6 +57,7 @@ struct CmdLineArgs(ImplicitlyCopyable, Writable):
     var n_layer: Int
     var learning_rate: Float32
     var drop_ratio: Float32
+    var kv_cache: Bool
 
     def __init__(
         out self,
@@ -74,6 +75,7 @@ struct CmdLineArgs(ImplicitlyCopyable, Writable):
         n_layer: Int = 6,
         learning_rate: Float32 = 1e-3,
         drop_ratio: Float32 = 0.1,
+        kv_cache: Bool = True,
     ) raises:
         # Turn ["chargpt.mojo", "n_embd=192", "n_layer=6"] into the
         # dictionary {"n_embd": "192", "n_laywer": "6"}.
@@ -151,6 +153,11 @@ struct CmdLineArgs(ImplicitlyCopyable, Writable):
         self.drop_ratio = (
             Self.to_dtype(arguments["drop_ratio"], drop_ratio) if "drop_ratio"
             in arguments else drop_ratio
+        )
+        self.kv_cache = (
+            arguments.get("kv_cache")
+            .map(lambda (v: String) -> Bool: Bool(v))
+            .or_else(kv_cache)
         )
 
     @staticmethod
