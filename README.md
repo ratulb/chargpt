@@ -6,9 +6,9 @@ A tiny character-level GPT in Mojo (CPU): KV-cached decoding with temperature/to
 
 chargpt trains a 6-layer transformer of about 4.3 million parameters on Tiny Shakespeare, then writes text one character at a time. The tensors and autograd come from [Tenmo](https://github.com/ratulb/tenmo) and the tokenizer from [mbpe](https://github.com/ratulb/mbpe). Both are Mojo libraries by the same author, so the whole path from raw text to an AdamW update is Mojo: no PyTorch, no NumPy, no Python in the loop.
 
-It is a teaching project that tries to be checkable. Every number below comes from a logged run, and the cached decoding path is tested against the plain one, token for token. It follows the structure of nanoGPT and is a small companion to [*Tokens to Transformers in Mojo*](https://ratulb.github.io/tokens-to-transformers/), a book in progress that builds a GPT-2 from scratch, tokenizer to training loop, on the same two libraries.
+It is a teaching project that tries to be verifiable. The cached decoding path is tested against the plain one, token for token. It follows the structure of nanoGPT and is a small companion to [*Tokens to Transformers in Mojo*](https://ratulb.github.io/tokens-to-transformers/), a book in progress that builds a GPT-2 from scratch, tokenizer to training loop, on the same two libraries.
 
-A sample from the finished default run (the last one it printed, unedited; it starts mid-word because the prompt is five characters from a random place in the validation text):
+A sample from the finished default run (the last generated output; it starts mid-word because the prompt is five characters from a random place in the validation text):
 
 ```text
 pparently faction.
@@ -40,8 +40,6 @@ To beggars, and the
 | Result | validation loss 1.49 nats (2.15 bits per character) at its best, at step 5,400; 1.55 at the end, where the model has begun to overfit. The bigram baseline reaches 2.49
  |
 | Cost | 8 h 34 min on an AMD EPYC 7B13 (4 cores, 16 GB)
-, 2.89 s per step |
-| Checked by | tests that compare cached decoding with uncached decoding token for token, including past the context window |
 
 ## Quick start
 
