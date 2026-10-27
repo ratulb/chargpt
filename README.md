@@ -39,7 +39,7 @@ To beggars, and the
 | Training | 10,000 steps of 32 windows × 96 characters (about 27.5 passes over the text), AdamW at 1e-3, dropout 0.1 |
 | Result | validation loss 1.49 nats at its best, at step 5,400; 1.55 at the end, where the model has begun to overfit. The bigram baseline reaches 2.49
  |
-| Cost | 8 h 34 min on an AMD EPYC 7B13 (4 cores, 16 GB)
+
 
 ## Quick start
 
