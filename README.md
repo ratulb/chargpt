@@ -173,13 +173,10 @@ The last evaluation is at step 9,900, because evaluations run every 300 steps an
 
 ![Training and validation loss, zoomed](loss_curve.svg)
 
-![Training and validation loss, log scale](loss_curve_log.svg)
-
 Training loss falls throughout, from 2.22 at step 300 to 1.07 at step 9,900. Validation loss falls quickly at first (1.97 at step 600, 1.55 at step 3,000), reaches its lowest reading, 1.49, at step 5,400, stays between 1.49 and 1.52 until step 7,800, and then drifts up to 1.55 by the end while training loss keeps falling. The gap between the two grows from 0.24 at step 3,000 to 0.49 at the end.
 
-That is overfitting. The run makes about 27 passes over a 1.1 MB text, and a 4.3M-parameter model with dropout at 0.1 has started to memorise it. Two caveats keep this in proportion. The lowest reading is the minimum of 33 noisy ones, so it is a little optimistic, and the final reading is only 0.07 above it. But the last seven readings all sit between 1.51 and 1.55, and the plot shows the turn. Stopping near step 6,000 would have taken about 5 hours instead of 8.5 and given up almost nothing (1.50 at step 6,000). This project does not yet stop early or keep the best checkpoint.
+That is overfitting. The run makes about 27 passes over a 1.1 MB text, and a 4.3M-parameter model with dropout at 0.1 has started to memorise it. This project does not yet stop early or keep the best checkpoint.
 
-For scale, the best reading is within about 0.02 nats of the nanoGPT reference below; the final reading is not. The two are not directly comparable, for the reasons given under that table.
 
 The full log of this run is [`run_logs/default-10k.log`](run_logs/default-10k.log).
 
