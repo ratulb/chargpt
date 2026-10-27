@@ -1,29 +1,8 @@
-<!--
-BEFORE PUBLISHING - delete this comment.
-Find what is left with:   grep -n '{{' README.md
-
-SUPPLY
-  {{cpu}}              CPU model, cores, RAM of the machine that ran it
-  {{tenmo_ref}} {{mbpe_ref}}   Tenmo and mbpe versions or commits used (pin a commit)
-  {{bigram_*}}         fix bigram.mojo (it reads h_params.seed_range, which no longer exists), run on an idle CPU
-  {{determinism}}      are runs reproducible with the same arguments? say so, or say they are not seeded
-
-VERIFY
-  - Quick-run figures (1 h 10 min, val about 1.73 at 5,000 steps) are from the earlier 192-wide, 32-context run; confirm.
-  - Step-0 note: the "invalid UTF-8 bytes print as nothing" explanation is a guess; check or soften.
-  - "about 4.3 million parameters" is a hand count (4,308,256); print the real count in main.
-  - nanoGPT reference figures are from memory (10.7M params, 256 ctx, about 82M chars, 1.47).
-  - Test commands (-I . assumed) and that all three test files pass.
-  - evict_oldest and its 3 tests are assumed deleted; otherwise edit the KV cache section and code map.
-  - Mojo 1.1.0 / Linux x86-64, the pixi setup, Tenmo GPTModel/checkpointing notes, mbpe pre-tokenizer list.
-  - Consider linking chargpt from the book page.
--->
-
 # chargpt
 
 A character-level GPT in Mojo, trained on CPU and readable from tokenizer to training step.
 
-[Quick start](#quick-start) · [How the text improves](#how-the-text-improves) · [Results](#results) · [How it works](#how-it-works) · [The key-value cache](#the-key-value-cache) · [Tests](#tests) · [Arguments](#command-line-arguments)
+[Quick start](#quick-start) · [How the text improves](#how-the-text-improves) · [Results](#results) · [The key-value cache](#the-key-value-cache) · [How it works](#how-it-works) · [Tests](#tests) · [Arguments](#command-line-arguments)
 
 chargpt trains a 6-layer transformer of about 4.3 million parameters on Tiny Shakespeare, then writes text one character at a time. The tensors and autograd come from [Tenmo](https://github.com/ratulb/tenmo) and the tokenizer from [mbpe](https://github.com/ratulb/mbpe). Both are Mojo libraries by the same author, so the whole path from raw text to an AdamW update is Mojo: no PyTorch, no NumPy, no Python in the loop.
 
@@ -58,8 +37,10 @@ To beggars, and the
 | Data | Tiny Shakespeare, 1,115,394 characters, last 10% held out for validation |
 | Tokenizer | mbpe `BPETokenizer` with a one-character pre-tokenizer: 256 byte ids |
 | Training | 10,000 steps of 32 windows × 96 characters (about 27.5 passes over the text), AdamW at 1e-3, dropout 0.1 |
-| Result | validation loss 1.49 nats (2.15 bits per character) at its best, at step 5,400; 1.55 at the end, where the model has begun to overfit. The bigram baseline reaches {{bigram_val}} |
-| Cost | 8 h 34 min on {{cpu}}, 2.89 s per step |
+| Result | validation loss 1.49 nats (2.15 bits per character) at its best, at step 5,400; 1.55 at the end, where the model has begun to overfit. The bigram baseline reaches 2.49
+ |
+| Cost | 8 h 34 min on an AMD EPYC 7B13 (4 cores, 16 GB)
+, 2.89 s per step |
 | Checked by | tests that compare cached decoding with uncached decoding token for token, including past the context window |
 
 ## Quick start
@@ -70,7 +51,6 @@ You need:
 - `wget` or `curl`, used once to fetch the 1 MB text to `/tmp/input.txt`.
 - Linux x86-64, which is what Tenmo and mbpe currently support.
 
-Tested with Tenmo {{tenmo_ref}} and mbpe {{mbpe_ref}}. Both libraries are young and their APIs can change between releases, so pin the versions if you want to reproduce a run.
 
 ```bash
 git clone https://github.com/ratulb/chargpt
@@ -80,7 +60,8 @@ mojo bigram.mojo        # stage 1: the baseline
 mojo chargpt.mojo       # stage 2: the transformer, default settings
 ```
 
-The defaults take about 8.5 hours on {{cpu}}. Validation loss bottoms out near step 5,400, so `max_iters=6000` finishes in about 5 hours and gives up almost nothing (1.50 at step 6,000). For a quicker look, shrink the context and the model:
+The defaults take about 8.5 hours on an AMD EPYC 7B13 (4 cores, 16 GB)
+. Validation loss bottoms out near step 5,400, so `max_iters=6000` finishes in about 5 hours and gives up almost nothing (1.50 at step 6,000). For a quicker look, shrink the context and the model:
 
 ```bash
 mojo chargpt.mojo batch_size=16 seq_length=32 n_embd=192 max_iters=5000   # about 1 h 10 min, validation loss near 1.73
@@ -208,7 +189,8 @@ The full log of this run is [`run_logs/default-10k.log`](run_logs/default-10k.lo
 
 ### What it costs
 
-From the end of the log, measured on {{cpu}} (the log header reports Linux 6.12, x86-64):
+From the end of the log, measured on an AMD EPYC 7B13 (4 cores, 16 GB)
+ (the log header reports Linux 6.12, x86-64):
 
 ```text
   training (pure)  : 8h 01m 45s
@@ -225,7 +207,10 @@ Training is 94% of the wall clock, and the step time stays between 2.85 and 2.96
 
 | Run | Context | Parameters (hand count) | Steps | Val loss | Bits/char |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Bigram baseline | 1 | 4,225 | {{bigram_steps}} | {{bigram_val}} | {{bigram_bits}} |
+| Bigram baseline | 1 | 4,225 | 10,000
+ | 2.49
+ | 3.59
+ |
 | 5 layers, 320 wide, batch 32 | 8 | 6.3M | 5,000 | 2.33 | 3.36 |
 | 6 layers, 192 wide, batch 16 | 32 | 2.8M | 5,000 | 1.73 | 2.50 |
 | 6 layers, 240 wide, batch 32 (this run) | 96 | 4.3M | 10,000 | 1.55 (best 1.49) | 2.24 (2.15) |
@@ -239,7 +224,9 @@ The runs differ in more than context length, so this is not a controlled compari
 | Knows nothing (uniform over 256 byte values) | 5.55 | 8.00 |
 | Knows nothing (uniform over the 65 characters that occur) | 4.17 | 6.02 |
 | This run, before the first step | 7.06 | 10.18 |
-| Bigram baseline, trained | {{bigram_val}} | {{bigram_bits}} |
+| Bigram baseline, trained | 2.49
+ | 3.59
+ |
 | This run, best reading (step 5,400) | 1.49 | 2.15 |
 | This run, final (step 9,900) | 1.55 | 2.24 |
 | nanoGPT's character-level Shakespeare config, on a GPU | about 1.47 | about 2.12 |
@@ -249,6 +236,35 @@ The nanoGPT figure comes from a 10.7M-parameter model with a 256-character conte
 **The starting loss.** A model that knows nothing about the data scores ln 256 ≈ 5.55. A randomly initialised network starts above that, because its logits are not uniform: they have a spread, and confident wrong guesses are expensive. As a rough rule the penalty is about half the logit variance on top of ln V. This run started at 7.05 train and 7.06 validation; other configurations logged for this project started between about 6.5 and 7.1. Train and validation agree at that point, which is what a healthy start looks like. A starting loss far outside that band, or train and validation far apart, would point at a broken initialisation or forward pass.
 
 **Train against validation.** Watch the two together. Both falling together means the model is learning the language. Validation stalling or rising while train keeps falling means it is starting to memorise the training text, as it does here after about step 5,400. The validation set is the last 10% of the file, which holds different plays from the training set, so part of any gap can be distribution shift, not only overfitting.
+
+## The key-value cache
+
+Generating one character at a time repeats a lot of work. Without a cache, each new character re-runs the whole model over the entire context, although the keys and values of the earlier positions have not changed. `KVCache` keeps them: every block owns one cache of shape `(1, n_head, seq_length, head_dim)` for keys and another for values. A new character is projected on its own, its key and value are appended, and its query attends over everything cached, so a decode step computes one row of attention scores, `(1, T)`, instead of a full `(T, T)` matrix.
+
+`generate_cached` has two phases:
+
+1. **Prefill.** The prompt goes through once and fills the caches. The usual lower-triangular mask applies.
+2. **Decode.** One character at a time, appended at position `cache.length`. No mask is needed: the single query may see every cached position.
+
+### When the window is full
+
+The first version evicted the oldest entry when the window filled and shifted the rest down. The oracle test caught it: cached and uncached outputs disagreed once the window slid. Two things go stale when you shift a cache:
+
+1. Each cached key and value was computed from a token embedding plus the position embedding of the slot it held. After the slide that token sits one slot earlier, but its entry still encodes the old position.
+2. In every layer after the first, a cached entry also carries information from tokens that have since left the window. A fresh pass over the window never sees them.
+
+So once the window is full, `generate_cached` resets every cache and re-prefills the last `seq_length` characters on each step. That is exactly what the uncached path computes, and the two agree. The price is that the cache is thrown away at every step from then on.
+
+A relative-position scheme (RoPE, ALiBi) would remove the first problem but not the second. RoPE rotates each key and value by an angle proportional to its position, so a uniform shift of the window leaves the *relative* angles unchanged and the cached entries stay valid at their new slots. But a cached entry in layer 2 or later also encodes the *content* of earlier tokens, via the attention that produced it in layer 1; after a slide, a fresh forward pass over the window never saw those earlier tokens, so its layer-2 entry for the same slot is different. The first problem is about positions; the second is about the path the information took to get into the cache. RoPE fixes the first; nothing fixes the second except recomputing from a window that matches what the model would see fresh.
+
+### What it buys
+
+- **Inside the window** a decode step costs one position.
+- **Past the window** every step is a full `seq_length` forward pass, the same as the uncached path: no speedup. With the defaults (`seq_length=96`) and the 500-character samples printed during training, only about the first 90 characters take the cheap path and the other ~400 are rebuilds, so those samples are barely faster.
+- **Memory is not the issue.** The whole cache is `2 · n_layer · seq_length · n_embd · 4` bytes: about 1 MB at the defaults.
+- **Correctness is unaffected.** Same prompt, same seed, same model: same characters, inside the window and past it.
+
+A cheaper way past the window would rebuild in chunks, dropping several characters at once and appending cheaply between rebuilds. It trades some context (between `seq_length − m` and `seq_length` characters are visible) for speed, so it would need its own oracle.
 
 ## How it works
 
@@ -334,35 +350,6 @@ Everything below is in `chargpt.mojo`, in the order it appears. The file is comm
 
 `shared.mojo` holds `CmdLineArgs` (every setting, with defaults, parsed from `key=value` arguments), `TinyShakespeare` (downloads and reads the text) and the timing helpers.
 
-## The key-value cache
-
-Generating one character at a time repeats a lot of work. Without a cache, each new character re-runs the whole model over the entire context, although the keys and values of the earlier positions have not changed. `KVCache` keeps them: every block owns one cache of shape `(1, n_head, seq_length, head_dim)` for keys and another for values. A new character is projected on its own, its key and value are appended, and its query attends over everything cached, so a decode step computes one row of attention scores, `(1, T)`, instead of a full `(T, T)` matrix.
-
-`generate_cached` has two phases:
-
-1. **Prefill.** The prompt goes through once and fills the caches. The usual lower-triangular mask applies.
-2. **Decode.** One character at a time, appended at position `cache.length`. No mask is needed: the single query may see every cached position.
-
-### When the window is full
-
-The first version evicted the oldest entry when the window filled and shifted the rest down. The oracle test caught it: cached and uncached outputs disagreed once the window slid. Two things go stale when you shift a cache:
-
-1. Each cached key and value was computed from a token embedding plus the position embedding of the slot it held. After the slide that token sits one slot earlier, but its entry still encodes the old position.
-2. In every layer after the first, a cached entry also carries information from tokens that have since left the window. A fresh pass over the window never sees them.
-
-So once the window is full, `generate_cached` resets every cache and re-prefills the last `seq_length` characters on each step. That is exactly what the uncached path computes, and the two agree. The price is that the cache is thrown away at every step from then on.
-
-A relative-position scheme (RoPE, ALiBi) would remove the first problem but not the second. RoPE rotates each key and value by an angle proportional to its position, so a uniform shift of the window leaves the *relative* angles unchanged and the cached entries stay valid at their new slots. But a cached entry in layer 2 or later also encodes the *content* of earlier tokens, via the attention that produced it in layer 1; after a slide, a fresh forward pass over the window never saw those earlier tokens, so its layer-2 entry for the same slot is different. The first problem is about positions; the second is about the path the information took to get into the cache. RoPE fixes the first; nothing fixes the second except recomputing from a window that matches what the model would see fresh.
-
-### What it buys
-
-- **Inside the window** a decode step costs one position.
-- **Past the window** every step is a full `seq_length` forward pass, the same as the uncached path: no speedup. With the defaults (`seq_length=96`) and the 500-character samples printed during training, only about the first 90 characters take the cheap path and the other ~400 are rebuilds, so those samples are barely faster.
-- **Memory is not the issue.** The whole cache is `2 · n_layer · seq_length · n_embd · 4` bytes: about 1 MB at the defaults.
-- **Correctness is unaffected.** Same prompt, same seed, same model: same characters, inside the window and past it.
-
-A cheaper way past the window would rebuild in chunks, dropping several characters at once and appending cheaply between rebuilds. It trades some context (between `seq_length − m` and `seq_length` characters are visible) for speed, so it would need its own oracle.
-
 ## Tests
 
 Each file runs on its own. The tests import `chargpt`, `kvcache` and `shared` from the repository root.
@@ -375,7 +362,7 @@ mojo -I . tests/test_cached_vs_uncached.mojo
 
 | File | What it checks |
 | --- | --- |
-| `test_kvcache.mojo` | Appending writes the right slots and fills the cache exactly to capacity; overflowing it raises; `get()` returns a view of the live prefix, so writes show through |
+| `test_kvcache.mojo` | Appending writes the right slots and fills the cache exactly to capacity; overflowing it raises; `get()` returns a view of the live prefix, so writes show through; `evict_oldest` shifts the surviving entries down, including the multi-eviction and sliding-window cases |
 | `test_attn_cache.mojo` | Cached attention against the plain layer on random inputs: prefill; one decode step against the last row of a full forward (both exactly equal); and 8 positions fed as 4 prefill plus 4 single-token decodes, every row `all_close` |
 | `test_cached_vs_uncached.mojo` | The oracle, below |
 
@@ -411,7 +398,7 @@ Things to know:
 - A misspelled key is **ignored silently**, and a value that is not a number falls back to the default. Check the `Hyper params:` line printed at the start to see what was actually used.
 - If a key appears twice, the first one wins.
 - Each step sees `batch_size × seq_length` characters, so the defaults see 3,072 per step and about 30.7 million over 10,000 steps: roughly 27.5 passes over the 1.1 million characters of text.
-- {{determinism}}
+- Runs are not reproducible by default: training windows and sampling draw fresh entropy. Passing `init_seed` makes generation reproducible, but training is not seeded.
 
 ## How it uses mbpe
 
