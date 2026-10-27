@@ -37,7 +37,7 @@ To beggars, and the
 | Data | Tiny Shakespeare, 1,115,394 characters, last 10% held out for validation |
 | Tokenizer | mbpe `BPETokenizer` with a one-character pre-tokenizer: 256 byte ids |
 | Training | 10,000 steps of 32 windows × 96 characters (about 27.5 passes over the text), AdamW at 1e-3, dropout 0.1 |
-| Result | validation loss 1.49 nats (2.15 bits per character) at its best, at step 5,400; 1.55 at the end, where the model has begun to overfit. The bigram baseline reaches 2.49
+| Result | validation loss 1.49 nats at its best, at step 5,400; 1.55 at the end, where the model has begun to overfit. The bigram baseline reaches 2.49
  |
 | Cost | 8 h 34 min on an AMD EPYC 7B13 (4 cores, 16 GB)
 
@@ -148,7 +148,7 @@ It still invents words at every stage. But the progression from layout without v
 
 ## Results
 
-Losses are in nats per character. Divide by ln 2 ≈ 0.693 to get bits per character, which is easier to feel. Each reading averages 50 random batches, so differences of a few hundredths between rows are noise.
+Losses are in nats per character. Each reading averages 50 random batches, so differences of a few hundredths between rows are noise.
 
 ### The default run
 
@@ -156,20 +156,20 @@ Losses are in nats per character. Divide by ln 2 ≈ 0.693 to get bits per chara
 mojo chargpt.mojo
 ```
 
-| Step | Train loss | Val loss | Val bits/char |
-| ---: | ---: | ---: | ---: |
-| 0 | 7.05 | 7.06 | 10.18 |
-| 900 | 1.64 | 1.81 | 2.61 |
-| 1,800 | 1.42 | 1.63 | 2.35 |
-| 2,700 | 1.33 | 1.56 | 2.25 |
-| 3,600 | 1.28 | 1.53 | 2.21 |
-| 4,500 | 1.24 | 1.52 | 2.20 |
-| 5,400 | 1.20 | 1.49 | 2.15 |
-| 6,300 | 1.17 | 1.50 | 2.16 |
-| 7,200 | 1.14 | 1.50 | 2.16 |
-| 8,100 | 1.11 | 1.54 | 2.22 |
-| 9,000 | 1.08 | 1.53 | 2.21 |
-| 9,900 | 1.07 | 1.55 | 2.24 |
+| Step | Train loss | Val loss |
+| ---: | ---: | ---: |
+| 0 | 7.05 | 7.06 |
+| 900 | 1.64 | 1.81 |
+| 1,800 | 1.42 | 1.63 |
+| 2,700 | 1.33 | 1.56 |
+| 3,600 | 1.28 | 1.53 |
+| 4,500 | 1.24 | 1.52 |
+| 5,400 | 1.20 | 1.49 |
+| 6,300 | 1.17 | 1.50 |
+| 7,200 | 1.14 | 1.50 |
+| 8,100 | 1.11 | 1.54 |
+| 9,000 | 1.08 | 1.53 |
+| 9,900 | 1.07 | 1.55 |
 
 The last evaluation is at step 9,900, because evaluations run every 300 steps and the loop ends at 10,000.
 
@@ -203,31 +203,26 @@ Training is 94% of the wall clock, and the step time stays between 2.85 and 2.96
 
 ### Context matters more than size
 
-| Run | Context | Parameters (hand count) | Steps | Val loss | Bits/char |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| Bigram baseline | 1 | 4,225 | 10,000
- | 2.49
- | 3.59
- |
-| 5 layers, 320 wide, batch 32 | 8 | 6.3M | 5,000 | 2.33 | 3.36 |
-| 6 layers, 192 wide, batch 16 | 32 | 2.8M | 5,000 | 1.73 | 2.50 |
-| 6 layers, 240 wide, batch 32 (this run) | 96 | 4.3M | 10,000 | 1.55 (best 1.49) | 2.24 (2.15) |
+| Run | Context | Parameters (hand count) | Steps | Val loss |
+| --- | ---: | ---: | ---: | ---: |
+| Bigram baseline | 1 | 4,225 | 10,000 | 2.49 |
+| 5 layers, 320 wide, batch 32 | 8 | 6.3M | 5,000 | 2.33 |
+| 6 layers, 192 wide, batch 16 | 32 | 2.8M | 5,000 | 1.73 |
+| 6 layers, 240 wide, batch 32 (this run) | 96 | 4.3M | 10,000 | 1.55 (best 1.49) |
 
 The runs differ in more than context length, so this is not a controlled comparison, and the exercise [below](#things-to-try) asks you to make it one. Still, the 6.3M-parameter model with an 8-character window is far behind the 2.8M-parameter model that can see 32 characters. At 5,000 steps, the step count of the 32-character run, this run reads about 1.51 against 1.73.
 
 ### Reading the loss
 
-| Model | Nats | Bits/char |
-| --- | ---: | ---: |
-| Knows nothing (uniform over 256 byte values) | 5.55 | 8.00 |
-| Knows nothing (uniform over the 65 characters that occur) | 4.17 | 6.02 |
-| This run, before the first step | 7.06 | 10.18 |
-| Bigram baseline, trained | 2.49
- | 3.59
- |
-| This run, best reading (step 5,400) | 1.49 | 2.15 |
-| This run, final (step 9,900) | 1.55 | 2.24 |
-| nanoGPT's character-level Shakespeare config, on a GPU | about 1.47 | about 2.12 |
+| Model | Nats |
+| --- | ---: |
+| Knows nothing (uniform over 256 byte values) | 5.55 |
+| Knows nothing (uniform over the 65 characters that occur) | 4.17 |
+| This run, before the first step | 7.06 |
+| Bigram baseline, trained | 2.49 |
+| This run, best reading (step 5,400) | 1.49 |
+| This run, final (step 9,900) | 1.55 |
+| nanoGPT's character-level Shakespeare config, on a GPU | about 1.47 |
 
 The nanoGPT figure comes from a 10.7M-parameter model with a 256-character context, trained on roughly 82 million characters against about 31 million here, so treat it as a reference point, not a target.
 
