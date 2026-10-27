@@ -61,7 +61,7 @@ The defaults take about 8.5 hours on an AMD EPYC 7B13 (4 cores, 16 GB). Validati
 mojo chargpt.mojo batch_size=16 seq_length=32 n_embd=192 max_iters=5000   # about 1 h 10 min, validation loss near 1.73
 ```
 
-Built against the Tenmo commit and mbpe version pinned in `pixi.toml`/`pixi.lock` (Tenmo `d297858`, mbpe `0.1.1`).
+Built against Tenmo `d297858` and mbpe `0.1.1`, the versions the default run used (see `pixi.toml`/`pixi.lock`).
 
 Settings are `key=value` arguments with no spaces around the `=`; see [Command-line arguments](#command-line-arguments).
 
@@ -217,7 +217,8 @@ The nanoGPT figure comes from a 10.7M-parameter model with a 256-character conte
 
 **The starting loss.** A model that knows nothing about the data scores ln 256 ≈ 5.55. A randomly initialised network starts above that, because its logits are not uniform: they have a spread, and confident wrong guesses are expensive. As a rough rule the penalty is about half the logit variance on top of ln V. This run started at 7.05 train and 7.06 validation; other configurations logged for this project started between about 6.5 and 7.1. Train and validation agree at that point, which is what a healthy start looks like. A starting loss far outside that band, or train and validation far apart, would point at a broken initialisation or forward pass.
 
-**Train against validation.** Watch the two together. Both falling together means the model is learning the language. Validation stalling or rising while train keeps falling means it is starting to memorise the training text, as it does here after about step 5,400. The validation set is the last 10% of the file, which holds likely different plays from the training set, so part of any gap can be distribution shift, not only overfitting.
+**Train against validation.** Watch the two together. Both falling together means the model is learning the language. Validation stalling or rising while train keeps falling means it is starting to memorise the training text, as it does here after about step 5,400. The validation set is the last 10% of the file, which likely holds different plays from the training set
+, so part of any gap can be distribution shift, not only overfitting.
 
 ## The key-value cache
 
@@ -295,8 +296,11 @@ chargpt/
 ├── run_chargpt.sh      background run with a timestamped log in run_logs/
 ├── plot_loss.py        loss_curve.svg and result tables from a log
 ├── loss_curve.svg
+├── pixi.toml
+├── pixi.lock
 ├── run_logs/
-│   └── default-10k.log
+│   ├── default-10k.log
+│   └── bigram-10k.log
 ├── LICENSE
 └── tests/
     ├── test_kvcache.mojo
@@ -383,7 +387,7 @@ Things to know:
 
 - A misspelled key is **ignored silently**, and a value that is not a number falls back to the default. Check the `Hyper params:` line printed at the start to see what was actually used.
 - If a key appears twice, the first one wins.
-- `init_seed` is an argument of `generate`/`generate_cached`, not a command-line setting; it makes a whole generation reproducible.
+- `init_seed` is an argument of `generate`/`generate_cached`, not a command-line setting.
 - Each step sees `batch_size × seq_length` characters, so the defaults see 3,072 per step and about 30.7 million over 10,000 steps: roughly 27.5 passes over the 1.1 million characters of text.
 - Runs are not reproducible by default: training windows and sampling draw fresh entropy. Passing `init_seed` makes generation reproducible, but training is not seeded.
 
