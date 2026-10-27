@@ -61,8 +61,6 @@ The defaults take about 8.5 hours on an AMD EPYC 7B13 (4 cores, 16 GB). Validati
 mojo chargpt.mojo batch_size=16 seq_length=32 n_embd=192 max_iters=5000   # about 1 h 10 min, validation loss near 1.73
 ```
 
-Built against Tenmo `d297858` and mbpe `0.1.1`, the versions the default run used (see `pixi.toml`/`pixi.lock`).
-
 Settings are `key=value` arguments with no spaces around the `=`; see [Command-line arguments](#command-line-arguments).
 
 For long runs there is a wrapper that detaches from the terminal and keeps a timestamped log, plus a plotting script that needs only the Python standard library:
