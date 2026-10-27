@@ -413,8 +413,6 @@ This is also the argument of the [first chapter of *Tokens to Transformers*](htt
 
 ## Lessons from building it
 
-- **Sampling changes the model's mode.** `generate` and `Loss.estimate` switch the model to eval mode, which turns dropout off and, in Tenmo, stops gradient tracking. Forgetting to switch back to train mode afterwards silently breaks training, and the loss goes through the roof. Every function that flips the mode switches it back before returning.
-- **Mask before softmax.** Setting future scores to minus infinity makes softmax give them exactly zero weight. Zeroing the weights afterwards leaves rows that no longer sum to 1.
 - **A test is how you find out a cache is wrong.** The eviction design looked reasonable. Only the token-for-token comparison showed it was not computing the same function; see [the key-value cache](#the-key-value-cache).
 
 ## What it deliberately leaves out
@@ -433,25 +431,8 @@ Known limits: the context is 96 characters, about a line or two of verse, so the
 Ideas, not yet started:
 
 1. **Checkpoints and early stopping.** Save the trained weights with Tenmo's checkpointing, keep the best-validation checkpoint (this run's came at step 5,400, not at the end), and add a separate `generate` command so a sample does not need a retrain.
-2. **A better training recipe.** A learning-rate schedule (a short warmup, then decay) and gradient clipping.
-3. **A cheaper window.** Rebuild in chunks, or move to relative positions, so the cache keeps paying off past `seq_length`.
-4. **A word-level pre-tokenizer.** Compare characters against subword tokens on the same model.
-5. **A GPU path.** A small, separate file, so the main code stays uncluttered.
-
-## Things to try
-
-Predict first, then run.
-
-1. **Context, controlled.** Run with `seq_length=8`, then `32`, then `96`, holding everything else fixed. How much of the loss gap in the table above was context, and how much was size or batch?
-2. **Overfit one batch.** Train on a single fixed batch. The loss should fall close to zero, which proves the plumbing works.
-3. **Width and heads.** Keep `n_embd` fixed and change `n_head`. Fewer, wider heads against more, narrower ones: which does the loss prefer?
-4. **Dropout.** Change `drop_ratio` from 0.1 to 0.0 and train for the same number of steps. Does the gap between train and validation loss change?
-5. **Position embeddings.** Remove them. Can the model still use word order?
-6. **The mask.** Remove the causal mask in `MultiHeadAttention`. Training loss will fall too well, because the model can read the answer, and generation will not work. Why?
-7. **Break the cache.** Replace the rebuild in `generate_cached` with evict-and-append (shift the cached keys and values down by one and write the new one at the end). Run `tests/test_cached_vs_uncached.mojo`, find the first divergence, and say which of the two stale-cache problems caused it.
-8. **The pre-tokenizer.** Swap `CharPretokenizer` for a word-splitting one, or one of mbpe's GPT-style pre-tokenizers, and train to a larger vocabulary. Loss per token is no longer comparable with loss per character. How would you convert one into the other?
-9. **Sampling.** Change the temperature and top-k defaults in `generate_text` and compare samples from one trained model at temperatures 1.0, 0.8 and 0.5.
-10. **Find the knee.** Run twice with the same settings and read off the step where validation loss bottoms out each time. How far apart are the two, and what does that say about how much to trust a single "best reading"?
+2. **A cheaper window.** Rebuild in chunks, or move to relative positions, so the cache keeps paying off past `seq_length`.
+3. **A GPU path.** A small, separate file, so the main code stays uncluttered.
 
 ## Credits
 
