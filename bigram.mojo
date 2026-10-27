@@ -146,7 +146,6 @@ struct BigramModel:
         mut self,
         indices: Tensor[INT],
         max_new_tokens: Int,
-        max_seed: UInt64,
     ) raises -> Tensor[INT]:
         # Write text one character at a time: look up the scores for the
         # latest character, turn them into probabilities, draw one character
@@ -168,7 +167,7 @@ struct BigramModel:
             # `multinomial` draws one id according to those probabilities.
             # `multinomial` uses 42 as default seed! Pass a random one
             var next_id = probas.multinomial[index_dtype=INT](
-                init_seed=Int(random_ui64(0, max_seed))
+                init_seed=None
             )
             # Append sampled token to the running sequence.
             appended = Tensor[INT].concat[track_grad=False](
@@ -296,7 +295,6 @@ def main() raises:
             model.generate(
                 Tensor[INT].zeros(1, 1),
                 max_new_tokens=h_params.max_new_tokens,
-                max_seed=h_params.seed_range,
             )[Indexer(0), Slicer()].tolist()
         )
     )
@@ -337,7 +335,6 @@ def main() raises:
                     model.generate(
                         Tensor[INT].zeros(1, 1),
                         max_new_tokens=h_params.max_new_tokens,
-                        max_seed=h_params.seed_range,
                     )[Indexer(0), Slicer()].tolist()
                 ),
                 end="\n",

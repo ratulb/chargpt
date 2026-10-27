@@ -1,0 +1,751 @@
+=== Run started: 2026-10-26 23:09:19 UTC ===
+=== Command: mojo chargpt.mojo  ===
+=== Host: Linux 6.12.113+deb13-cloud-amd64 x86_64 ===
+
+=================================================================
+CharGPT training | tokenizer: mbpe BPETokenizer[CharPretokenizer]
+=================================================================
+Hyper params:  CmdLineArgs(batch_size=32, seq_length=96, eval_iters=50, eval_interval=300, max_iters=10000, max_new_tokens=500, n_embd=240, n_head=6, n_layer=6, learning_rate=0.001, drop_ratio=0.1)
+
+[1/6] Loading corpus
+Total bytes:  1115394
+Total code points:  1115394
+Total graphemes:  1115394
+
+  [time] load corpus: 0.00s
+
+[2/6] Training tokenizer
+  vocab size: 256
+  [time] tokenizer training: 0.01s
+  encoded tokens: 1115394
+  [time] encode corpus: 0.01s
+
+[3/6] Building dataset, model and optimizer
+  [time] setup: 0.21s
+
+[4/6] Baseline before training (expect loss ~6.6)
+  step 0 | train loss 7.05181 | val loss 7.05574 | eval 47.87s
+RRWhLX.ƵWƑ..gXX~ϋX~F.W#.LLR\,Д~Vi#@W#W!ŵ\\RFhWWx+
+  [time] sample generation: 8.99s
+
+[5/6] Training for 10000 steps (eval every 300 )
+  step 300 | train loss 2.220856 | val loss 2.2481253 | 2.89s/step | eval 47.11s | ETA 7h 46m 49s
+d dids waid for cess hes:
+Tu ou th wre stsence a of te gor all an of cakipts;
+The the. I ge but sue gorsione bry the fugis thak but mas wis tore
+O ores bror ofens lor trit he el he epbim ior eadle theay thut.
+
+LERD RIOW:
+He wers nur! withene thess cat my ak our by, vou bourdut dour frow thitei's
+Yooy fot fourelade ditheant githte ile hithe or ley frad sles to thing sit thes
+Wis my se sull lin por ad dandice thads gor thas thouss popte.
+He hous the at thor you scrud me pent in pannot frot an taglucher
+  [time] sample generation: 9.04s
+
+  step 600 | train loss 1.8317975 | val loss 1.9661658 | 2.92s/step | eval 47.19s | ETA 7h 34m 38s
+nce,
+As the cove wichand namies arequient I so a so him the Hows
+To staker que for I pay shall thee sain, be castent
+Not fainler and by hore. That Marext here
+Do by see, and so sale do goo leak to hert and that of their
+But your more good peady. That to shal a my and
+With a doth is to such to berang a by the spe off,
+No yare by in are look of of lave.
+
+I ROMNIE:
+Nor I let your sighn of to have
+I so done, hour how so his is of is
+To seentelst the of the the the se thou se bespiok thy be at no or
+To mo
+  [time] sample generation: 9.05s
+
+  step 900 | train loss 1.6408935 | val loss 1.8115827 | 2.96s/step | eval 47.17s | ETA 7h 23m 04s
+ bride the forguin: you confindrian's to surde
+In of your call you composing main; sreak I am,
+no are of men the could great of this him.
+
+KING RICHARD II:
+O not if I my doth mine to these unwe duepay's!
+Will yet be to fiellood up my prottery and well with my forguar;
+We do thou with lettery Husby the love was!
+Mare honour to shall be of the we will with thank,
+I do will of my wase with sun to feemillow for thee?
+
+HENRY VI:
+When to it me be be him them beggants; I have mage see
+With oth to such your
+  [time] sample generation: 8.99s
+
+  step 1200 | train loss 1.5329197 | val loss 1.7113184 | 2.88s/step | eval 47.33s | ETA 7h 06m 51s
+th.
+But him these then to their rest,
+Signal sirates Much with a widdier they not swort,
+And but not to the change to king myself.
+
+FRIAR LAURENCE:
+While handst meet. For mind the spowes, there copeons
+Of a bongstick from then so advicelong
+The hunds Blance.
+
+Second Citizen:
+Be liege impose up to thy heads lady of it.
+
+BUCKINGHAM:
+Had forth, I know the leby mory my your prople,
+Rishall and sent it the kind it
+must childis in drumperce.
+
+KING EDWARD IV:
+I was spoes death of the homat the good not, wel
+  [time] sample generation: 9.01s
+
+  step 1500 | train loss 1.4682264 | val loss 1.6795655 | 2.89s/step | eval 47.25s | ETA 6h 51m 52s
+e way;
+Somew by the ears So and more than will be run
+The contred dear so long extress to such what hath
+donest in a name her bow?
+
+ISABELLA:
+What is the is shumbled; that when deliverable
+That my own incall the but so be with that me?
+
+QUEEN MARGARET:
+Be's cannot blessed evoch the stable of the people
+Theg soldier in the decutch the dud great thee arms
+My long to counsel or that the knows what refing'd.
+
+GLOUCESTER:
+Where I think day is thought could I have hithead
+That was swort is upon their sweet
+  [time] sample generation: 9.06s
+
+  step 1800 | train loss 1.4156487 | val loss 1.6263539 | 2.88s/step | eval 47.34s | ETA 6h 36m 42s
+u stay to our grace you would see,
+That we more done-more of deserve me have shall sea
+that should aps; if your good bid to himself
+For you, we ghave, and to me.
+
+Second From the matter, then I shall not be think,
+When you shall for the Duke of Claid did by Buckingham,
+Bemade as good set to drong, that voices.
+
+LUCIO:
+I hear where,
+And thou expoke and his shall be blood.
+
+DUKE VINCENTIO:
+What would?
+
+First Citizen:
+By the percy false and for the springs.
+
+CORIOLANUS:
+I must heaven you.
+
+First Citizen
+  [time] sample generation: 9.11s
+
+  step 2100 | train loss 1.3835046 | val loss 1.5895827 | 2.89s/step | eval 47.24s | ETA 6h 21m 52s
+ after this presence my devilial man
+As the curdin wan. Second Romeo here cazen:
+And then we hath man make them lands that do't his use
+Charge o' the feur and clease.
+
+Provost:
+I pray you then you must them little of the piece.
+
+GLOUCESTER:
+Not thou could not the live of my life from yours.
+
+NORTHUMBERLAND:
+It is thy broke thee did with his true of York;
+It is the purpose, disfores me the purpose.
+
+QUEEN ELIZABETH:
+I thou do fair desparted be more will your worst,
+Yet that thus Lord of Englandsting t
+  [time] sample generation: 9.00s
+
+  step 2400 | train loss 1.3593686 | val loss 1.570105 | 2.88s/step | eval 48.04s | ETA 6h 07m 06s
+ you read; for, by him this issue at thy hand,
+That wherein thou woful die?
+
+Second Servant:
+Thou hast find hour keep thee consented
+Would sland men the given of him soul,
+Which we shall be not the fair, what shall reing
+All as purple the lost and with against here,
+Which and sent might are the stapper'd the vast;
+Which do yieldy with danaces: affight he thee,
+'Tis well as as Cretholds made friends,
+As if shall my like any warwith at my my life,
+They be together against the purpose,
+Your worships he
+  [time] sample generation: 9.62s
+
+  step 2700 | train loss 1.3291363 | val loss 1.5602521 | 2.90s/step | eval 47.24s | ETA 5h 52m 37s
+
+
+ADRINGELO:
+I queen at you was enter-fair!
+
+HASTINGS:
+My banish'd name, and from your well:
+Nay affient my life, without it very souls,
+That we greatest at lians so mine own is.
+My follow lords, but that, whose they with a limb!
+Which, who to this servant to breath?
+
+SICINIUS:
+As noble swifted on will speak that was to him.
+
+KING EDWARD IV:
+And in his fresh may players, to be so close,
+And not dear done: this better a dure
+That should the prince of world's in hones;
+And all the part of thy mistrust
+  [time] sample generation: 9.14s
+
+  step 3000 | train loss 1.3118296 | val loss 1.5470167 | 2.88s/step | eval 47.25s | ETA 5h 37m 55s
+NDELLANUS:
+We are the parties subscatce, thus since you are
+they proofit, madam, but me our commend
+And my mouths pentry as you pray weep! and you are,
+Am those like an he nor faming in it;
+But be grising sour of her, restrength from fiend,
+That thou know that Shallow her bring this come.
+And in the work,  not do not the heed:
+But posts I was not shall send of a city death,
+Such as send the wind sonester the business of honour,
+We should have say for thy house thou, thou strike,
+A marge witness thou
+  [time] sample generation: 9.12s
+
+  step 3300 | train loss 1.286875 | val loss 1.5472435 | 2.88s/step | eval 47.17s | ETA 5h 23m 14s
+cable him to her.
+
+BENVOLIO:
+Nay, sir, be sign you have tongue me,
+Lander ald sleep the honour of right she for bence
+Which you have appredition'd in their honour.
+
+ROMEO:
+Sir, you may shall be like to the freest arm:
+Thou wilt tell me not serve by my crown.
+
+SLY:
+Provost, might I have thy willing come the clouders
+Of all this caster thy blassings.
+
+KING HENRY VI
+
+QUEEN ELIZABETH:
+There is the prince, we'll say to quench.
+
+KING RICHARD III:
+But what is the common this consent;
+Your very cures; and th
+  [time] sample generation: 9.20s
+
+  step 3600 | train loss 1.2750354 | val loss 1.5295453 | 2.86s/step | eval 47.28s | ETA 5h 08m 27s
+Thou hast not so do like the fault of thy father.
+
+DUKE OF AUMERLE:
+There we will ender: if ever turn you terred be,
+I'll not the flatter bands to Romeo.
+
+CLIFFORD:
+Then former she was your directing blood,
+'Return in the seath, being nor reign'd child,
+Which men and our sheels grace-boding to the world,
+So means to not so much of him.
+
+RATCLIFF:
+Nay, is not this it but end my mother,
+It will so will not tell thee with was off again.
+
+LUCIO:
+Come upon, yet she shall be all.
+
+POMPEY:
+One that thy othe
+  [time] sample generation: 9.00s
+
+  step 3900 | train loss 1.2573522 | val loss 1.5139924 | 2.87s/step | eval 47.20s | ETA 4h 53m 51s
+your honours.
+
+QUEEN MARGARET:
+The prince I cannot have true not now:
+Say you, sir? what's your queen? But, I resign
+My son words and hold expect then they be shed thy state
+That sorrow and for my brother now hath been:
+Prove like an enemy; and if thou comest so such so,
+March venture like in parton any berefit's throne,
+Have not been cannot death my breast;
+O all house; some is so still I have not shadow'd
+Come, that must unplease, and sleep and fear
+Against you have heard me alone,
+Thy shame is at
+  [time] sample generation: 8.98s
+
+  step 4200 | train loss 1.248977 | val loss 1.5133531 | 2.87s/step | eval 47.20s | ETA 4h 39m 17s
+atch will give me considit it so hold
+A saint, that makes a poison exceeds to give it
+Like me between to be done: what can doth me of the day
+That curses of the pointed indeed from the aim:
+And mighty should she will first his legs,
+Which serves my heart could not and of their reward
+Host thou hadst not broke to thee, nor any you:
+Nor come here to much be man?
+
+BISHOP OF CARLIFFORK:
+My lord, we will see you say you, you good friar:
+He will do it never be your conscience of their
+opinion age, we may m
+  [time] sample generation: 9.03s
+
+  step 4500 | train loss 1.238012 | val loss 1.5233007 | 2.86s/step | eval 46.95s | ETA 4h 24m 41s
+
+
+KATHARINA:
+What shall not speak the cold queen design,
+And the sea shall come and denied?
+
+GLOUCESTER:
+A darest of my lord, and palm that hath alms
+In brought by the house of my judgment.
+
+GLOUCESTER:
+I am bound, on his face, then have not here poison to him.
+
+KING EDWARD IV:
+O late! with her, my lords will make them that neither.
+They shall come, I am none that often is groing them.
+Speak shall I live, which say not they great,
+It shall not be so found and no more.
+
+ISABELLA:
+Alas, and go.
+
+MENENI
+  [time] sample generation: 8.97s
+
+  step 4800 | train loss 1.217646 | val loss 1.5049511 | 2.86s/step | eval 46.96s | ETA 4h 10m 05s
+zens.
+
+LEONTES:
+I have won to their worpoing.
+To-morrow, and to sleeping and where that he
+doth she, which doth upon me.
+
+CAPULET:
+Hath heaven, man: I'll say, and by thy knee
+In his head and his distraction. I pawn to well.
+
+Nurse:
+Make all the disinseless to me once again:
+What mansman for a part of thy heart to things are,
+Commit that the devil of thy life and enter'd,
+Do not rather for the frost king. O, for these rights,
+Which now that had such glass prisoner. Your kingdom,
+Juliet's parties to th
+  [time] sample generation: 9.06s
+
+  step 5100 | train loss 1.2097851 | val loss 1.5134548 | 2.91s/step | eval 46.91s | ETA 3h 55m 46s
+ thou art infliction, make a lord,
+But ran my instinent, for that my should be thought
+With friend, would the solemn that e'er your complimed strength!
+O, we shall stand the dead, the good crown is comes,
+To extremestimes to his countrymen in the heavy:
+O commands me to send thine are the blood times,
+Whose revenged things to your honour: he's a cold age,
+When we will awake a friends of the gods castle.
+
+WARWICK:
+Even turn the Lady Bagot and Lord Hastings,
+So so such mercing own sister of traitor and
+  [time] sample generation: 9.03s
+
+  step 5400 | train loss 1.1966742 | val loss 1.488646 | 2.92s/step | eval 46.85s | ETA 3h 41m 28s
+ they
+But they learn our provestices to me for sea
+By name's speed. Thou art proclamation the bitter?
+
+Second Murderer:
+For sorrow's hate, call't beyond sir. The sun
+Offer then a king, my soul, and set it me; not with my behold
+And stem profit the tribuls of desire their ends:
+Would you did not see his life and there.
+
+HERMIONE:
+What is the little hundred to the great court?
+
+BRUTUS:
+Here's a loverous cordial in execution.
+
+Second Murderer:
+The gods that mistrust sense the like that Valera,
+That you
+  [time] sample generation: 9.00s
+
+  step 5700 | train loss 1.1900755 | val loss 1.5152682 | 2.85s/step | eval 46.95s | ETA 3h 26m 54s
+ any field upon our kings
+Which wilt have two thing to excuse that
+was banish'd for rejuries.
+
+First Senator:
+To else
+That makes him pardonner to the city.
+Sweet lady, and respect so shall be retired
+To have find our face of spectacal heaven?
+And shall be such as sadventure, make fair that ever
+I have done: if I chive a tardy chance
+To a visitage of my name cannot be loved and crow--
+Take mighto prosper the wall of his mark'd it.
+Take the queen, upon me, to make a man and a fall
+To shepherds the sing
+  [time] sample generation: 8.95s
+
+  step 6000 | train loss 1.18114 | val loss 1.4985045 | 2.92s/step | eval 47.16s | ETA 3h 12m 35s
+ 'em.
+
+First Servingman:
+How for the pity of your disposed for me?
+
+Clown:
+Go the odds way to be he sight out of your honour,
+And be not you gone.
+
+POLIXENES:
+I must be too bawd.
+
+LUCENTIO:
+And for venom my part will desire to meet,
+He that would shows my face, but do't, I hope,
+Recome, cause in no man's wife, to see, he make
+no hastillory to be enter'd upon it, and the rest,
+Shall be suffer'd by himself, and I would not have had
+returned thee.
+
+DUKE OF YORK:
+I do beseech you, sir, to and think it so
+  [time] sample generation: 9.22s
+
+  step 6300 | train loss 1.1661878 | val loss 1.4993237 | 2.93s/step | eval 47.07s | ETA 2h 58m 16s
+st,
+That they shall be the ookest move a princely
+Thing that fores from the white; interchang a straight we on
+near, for the soul of the cown tall, to hie him
+By the hazard of his bastard but the friend
+To thee and daman with the wanton of heir and
+thoughtst the Tarpeian in the weak of air,
+And say it is a marriage by to the mark of hope:
+So doubt I from the fair court it and keep him daughter.
+
+POMPEY:
+If it be possible well met, and my lodging death
+Is my the widows friends, and says 'Is well stay.
+  [time] sample generation: 9.04s
+
+  step 6600 | train loss 1.1646396 | val loss 1.5078534 | 2.93s/step | eval 46.96s | ETA 2h 43m 54s
+ thoughts, in the
+watery thoughts of that, the most slaughter'd hand.
+
+CLARENCE:
+The part is of honour of them at lightning soul
+I shall hardly east close the world: but stand 'tis brother
+To spier the pity and as you both both of his angry.
+O sides my daughter, Isabel.
+
+First Lord:
+So dear?
+
+POMPEY:
+What, is it, lest it with the storm of service?
+
+Second Murderer:
+The great Norfolk.
+
+First Lord:
+For why shall we do well, I do prejure thee as short.
+
+GLOUCESTER:
+The learn to joy 'gain,' quoth afflict
+  [time] sample generation: 8.98s
+
+  step 6900 | train loss 1.1449262 | val loss 1.5065186 | 2.93s/step | eval 47.14s | ETA 2h 29m 32s
+me life, interious trumpets buried widows,
+That we shall come to come to chance shall be king
+In prepared sincester with my tongue lies?
+
+HASTINGS:
+You know not our knees apparel all the liests.
+
+QUEEN ELIZABETH:
+A two prince's deadh with the sceptre spright and granted,
+That he doth run on the lumps of sight,
+Or of weak sit and that defend the earl.
+
+JULIET:
+How now! lords, begin spirit, more sensed my soul.
+
+ROMEO:
+Ay, ay, as that fall out of damning bench.
+
+ROMEO:
+Ay, but looks he shall play the d
+  [time] sample generation: 9.10s
+
+  step 7200 | train loss 1.1363492 | val loss 1.5005025 | 2.88s/step | eval 47.10s | ETA 2h 15m 02s
+rized of shed
+The heart the sentence of your brother's royal bench,
+By my county of the king eyes, thou darest married
+it for the triumph of thy night's death:
+And shall afflicts thy intent thousands and wretch
+Of the walls from thy son, study wints fast.
+
+All:
+Thy mother, towards; I may be an egg to grow.
+
+TYBALT:
+Most wonder of your nine order of your deputy.
+
+GLOUCESTER:
+Well, believe thee, say; that I shall please your authority,
+I am not his malferer counsellor with more than he
+sees and them th
+  [time] sample generation: 8.95s
+
+  step 7500 | train loss 1.1304059 | val loss 1.5085031 | 2.90s/step | eval 47.22s | ETA 2h 00m 35s
+awn more than are fights;
+The sweet pass the common demand that they have pass:
+His daughter suns theas, boy, bears the world of his son
+That beats you must be patient.
+
+PAULINA:
+A villain! therefore; come, then, by me the servant:
+Which let me be patient; if they they see your patience
+But only no more in words of grant and faith
+As if you be called him that is.
+
+BRUTUS:
+Be staying and so be abroad in his worthy state,
+That which hast been bsent and men to his course,
+Were you a lady servant days to
+  [time] sample generation: 9.02s
+
+  step 7800 | train loss 1.1185482 | val loss 1.4972142 | 2.87s/step | eval 47.07s | ETA 1h 46m 05s
+ of morning, as we discontented,
+Which she in safety I send to thee more rest:
+Part that divine than the bashful sufficient crown
+Until it the white which great from the like,
+I will hear him he so.'
+
+BENVOLIO:
+Thou disposition of my weary shepherds,
+Yet art thoughts: forbear a wavest of these brains
+Should such be rich in anger. I'll have you past it.
+
+ANGELO:
+
+ISABELLA:
+Good madam, sir.
+
+DUKE VINCENTIO:
+With one chamberlain, she hath not men as mere
+for them, where my she lives to Rome and mine,
+To
+  [time] sample generation: 9.11s
+
+  step 8100 | train loss 1.1069665 | val loss 1.5363089 | 2.85s/step | eval 47.00s | ETA 1h 31m 35s
+
+KATHARINA:
+I thank thee, noble Warwick.
+
+LEONTES:
+Mark thou the oracle wars. The earth death gaves strong'd
+Upon a bill and any measure hath of a little:
+And so I am a sigh, and I shall not believe one
+In the comple. I cannot be done to before mew'd.
+
+DUKE OF YORK:
+What is the traitor whereof we thou hast in thy flower
+To be't upon him for the Capulets' hands,
+Which at heady to find every hollot,
+To live the rascals of honours being,
+And bid him away waking his creature has hidden;
+And see, have his
+  [time] sample generation: 9.13s
+
+  step 8400 | train loss 1.1071688 | val loss 1.5190129 | 2.87s/step | eval 47.18s | ETA 1h 17m 06s
+Sweet Duke of Napster,
+Then keep me a committer cut off
+By the avouch the heavens to see his death.
+Methought not thy foe;
+But Warwick but discharged your counsel:
+And, if thou art not draw the king's blood,
+With all the sorrow man's name lives and will
+The blearer for the city.
+
+CORIOLANUS:
+What, man?
+
+VOLUMNIA:
+Sir, you may it good?
+
+MARCIUS:
+If I was, by the advocation through, and we are
+received in a brief man's enemies. Go, good friend!
+
+DUKE VINCENTIO:
+Coriolanus and every man's. This good tim
+  [time] sample generation: 9.04s
+
+  step 8700 | train loss 1.0997284 | val loss 1.5066888 | 2.87s/step | eval 47.01s | ETA 1h 02m 39s
+ I, with him, let us better my pell,
+To make my grown mine arms
+The curious capable and low made the immortal crys,
+Were the warning withal.
+
+CAMILLO:
+Nay, go to: the consents are not words out with away.
+
+LIO:
+Dear gone for you.
+
+LEONTES:
+There's a sword of the people,
+Who thou dost know a shame.
+
+PETER:
+Your commission
+Are the queen of your blood wedder, who should be
+much such a place. My dearest love I precious
+to your highness; but not the provantgors
+And dear the services of much love, is solem
+  [time] sample generation: 8.98s
+
+  step 9000 | train loss 1.0828137 | val loss 1.5300882 | 2.88s/step | eval 48.66s | ETA 48m 11s
+rmly and at the precious mouth
+Have the shepherd of it dreadful to the souls
+Of all the father is discreetings, to tie the law
+And ne'er waker in this brings some better:
+The crown men, are now am thousand son, in Lords,
+To see the powerful scotlanding rest to cheeks.
+
+GLOUCESTER:
+Ay, but said 'What thratrong that woman to make
+His bloody flesh still, and as his soon's soul is
+His he right. Give me a word! I am glad to unspent,
+To employ a room this body more,
+Than I am no jewel for thy shame from he
+  [time] sample generation: 9.14s
+
+  step 9300 | train loss 1.0731814 | val loss 1.5317001 | 2.88s/step | eval 47.34s | ETA 33m 45s
+ able to air.
+
+PARIS:
+Good men and let me her face.
+
+FRIAR PETER:
+What says he? commanded mitions?
+
+MERCUTIO:
+Full of dead testable words did with you;
+But I, by his face hath stood like leads,
+But that not steal desire yet they to prison.
+
+QUEEN ELIZABETH:
+Truly, early thou handfy of my daughter.
+
+KING RICHARD II:
+Stanley, and fear my rude tears debase sorrow
+That we see them from the wolf, where they they Pompeys,
+With the purgests of his human evidence,
+That he is as many of the sight of the deep
+
+  [time] sample generation: 9.03s
+
+  step 9600 | train loss 1.0760028 | val loss 1.5355841 | 2.90s/step | eval 47.27s | ETA 19m 18s
+you to kill yourselves?
+
+WARWICK:
+And in good time, but I would have to cut him
+As he cannot die to accuse us as to be
+A father to sea the god on The Lord Aumerle.
+
+BUCKINGHAM:
+Poor soul and shall redeem for this God's voice.
+Is it this very princessities of fearful blood?
+
+JULIET:
+And for I was a worthy sad brow of love as brief,
+Makes death, and thou seest thy Tower, Sir Choortensio.
+
+HENRY BOLINGREY:
+The father of Lancaster is England.
+
+KING EDWARD IV:
+Now will my wife with his saints which he is
+  [time] sample generation: 9.39s
+
+  step 9900 | train loss 1.0661467 | val loss 1.5544722 | 2.92s/step | eval 47.22s | ETA 4m 51s
+
+
+CALUS:
+He loves the selfsame in-peace pin me, and I have
+done it.
+
+CORIOLANUS:
+What must I believe thee?
+
+Second Gentleman:
+To make this this alliance?
+
+MENENIUS:
+I will bed.
+
+Sir, how we have a placement of these feet, play, the wars
+He will not be mine own.
+
+POLIXENES:
+It pired my children,
+I'll dart saint; let's calumny me.
+
+CAMILLO:
+By and by our time of death, Isabel,
+Is pressent for my part; who are in our dum!
+
+LUCLIET:
+That my father is a thousand first should soonest
+As I came a strange in
+  [time] sample generation: 9.01s
+
+[6/6] Final sample from the trained model
+pparently faction.
+
+KING EDWARD IV:
+Fair brother's mother, who dost thou so? and thou,
+That thought to make a perison to one,
+Con the same thing eyes of the common people,
+Or the father new refuge the glory by the hire.
+What's lambs? love I am dishonour'd?
+What news shall were the crown? if I be consul,
+I come, or not the stock of the meeting in
+the mourning through the semularies of access,
+Not stir the bury of Mantua.
+
+CORIOLANUS:
+No remember one a cardon of her that hath show'd
+To beggars, and the
+  [time] sample generation: 9.01s
+
+=================================================================
+Done. Timing summary
+=================================================================
+  training (pure)  : 8h 01m 45s
+  avg per step     : 2.89s
+  steps / second   : 0.3459536813073379
+  evaluation       : 26m 45s
+  text generation  : 5m 17s
+  total wall clock : 8h 33m 49s
