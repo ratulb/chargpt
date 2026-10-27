@@ -197,7 +197,8 @@ Training is 94% of the wall clock, and the step time stays between 2.85 and 2.96
 | 6 layers, 192 wide, batch 16 | 32 | 2.8M | 5,000 | 1.73 |
 | 6 layers, 240 wide, batch 32 (this run) | 96 | 4.3M | 10,000 | 1.55 (best 1.49) |
 
-The runs differ in more than context length, so this is not a controlled comparison, and the exercise [below](#things-to-try) asks you to make it one. Still, the 6.3M-parameter model with an 8-character window is far behind the 2.8M-parameter model that can see 32 characters. At 5,000 steps, the step count of the 32-character run, this run reads about 1.51 against 1.73.
+The runs differ in more than context length, so this is not a controlled comparison. The most suggestive pair is the 6.3M-parameter model with an 8-character window against the 2.8M-parameter model with a 32-character window: the smaller model wins by 0.60 nats (2.33 against 1.73) while seeing only about twice as many characters. That hints context matters more than size, but width, depth and batch size differ too, so it is a hint, not a measurement. A clean answer would hold everything but the context fixed; this table does not, and these are the runs we have.
+
 
 ### Reading the loss
 
