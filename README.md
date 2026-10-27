@@ -142,7 +142,7 @@ A marge witness thou
 
 **Step 10,000, validation loss 1.55.** This is the sample at the top of the page. Speaker names alternate (`KING EDWARD IV:`, `CORIOLANUS:`), most words are real and short phrases hold together (`the common people`, `if I be consul`), but invented words remain (`perison`, `semularies`, `cardon`) and the lines do not add up to a scene. Next to the step-3,000 sample it is not obviously better, and the loss agrees: 1.55 at step 3,000 and 1.55 at the end.
 
-It still invents words at every stage. But the progression from layout without vocabulary, to vocabulary without grammar, to grammar without coherence is visible even at this scale, where you can read every file. And it stops: the samples stop improving at about the point where the validation loss does, which is the subject of the next section.
+It still invents words at every stage. But the progression from layout without vocabulary, to vocabulary without grammar, to grammar without coherence is visible. And it stops: the samples stop improving at about the point where the validation loss does.
 
 ## Results
 
