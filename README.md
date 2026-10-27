@@ -248,7 +248,8 @@ Generating one character at a time repeats a lot of work. Without a cache, each 
 
 ### When the window is full
 
-The first version evicted the oldest entry when the window filled and shifted the rest down. The oracle test caught it: cached and uncached outputs disagreed once the window slid. Two things go stale when you shift a cache:
+The first version evicted the oldest entry when the window filled and shifted the rest down. The reference test caught it:
+ cached and uncached outputs disagreed once the window slid. Two things go stale when you shift a cache:
 
 1. Each cached key and value was computed from a token embedding plus the position embedding of the slot it held. After the slide that token sits one slot earlier, but its entry still encodes the old position.
 2. In every layer after the first, a cached entry also carries information from tokens that have since left the window. A fresh pass over the window never sees them.
@@ -264,7 +265,7 @@ A relative-position scheme (RoPE, ALiBi) would remove the first problem but not 
 - **Memory is not the issue.** The whole cache is `2 · n_layer · seq_length · n_embd · 4` bytes: about 1 MB at the defaults.
 - **Correctness is unaffected.** Same prompt, same seed, same model: same characters, inside the window and past it.
 
-A cheaper way past the window would rebuild in chunks, dropping several characters at once and appending cheaply between rebuilds. It trades some context (between `seq_length − m` and `seq_length` characters are visible) for speed, so it would need its own oracle.
+A cheaper way past the window would rebuild in chunks, dropping several characters at once and appending cheaply between rebuilds. It trades some context (between `seq_length − m` and `seq_length` characters are visible) for speed, so it would need its own reference test.
 
 ## How it works
 
@@ -364,9 +365,10 @@ mojo -I . tests/test_cached_vs_uncached.mojo
 | --- | --- |
 | `test_kvcache.mojo` | Appending writes the right slots and fills the cache exactly to capacity; overflowing it raises; `get()` returns a view of the live prefix, so writes show through; `evict_oldest` shifts the surviving entries down, including the multi-eviction and sliding-window cases |
 | `test_attn_cache.mojo` | Cached attention against the plain layer on random inputs: prefill; one decode step against the last row of a full forward (both exactly equal); and 8 positions fed as 4 prefill plus 4 single-token decodes, every row `all_close` |
-| `test_cached_vs_uncached.mojo` | The oracle, below |
+| `test_cached_vs_uncached.mojo` | The reference test, below |
 
-**The oracle.** The cache is an optimisation, not a change of semantics, so for the same prompt, seed, weights and sampling settings `generate_cached` must return exactly the token ids that `generate` returns. The uncached `generate` is kept in the code for this reason. The test trains a model for 20 steps on a short synthetic corpus, so the weights are not initial noise, and compares the two for seeds 7 and 42 in four cases:
+**The reference test.** The cache is an optimisation, not a change of semantics, so for the same prompt, seed, weights and sampling settings `generate_cached` must return exactly the token ids that `generate` returns.
+ The uncached `generate` is kept in the code for this reason. The test trains a model for 20 steps on a short synthetic corpus, so the weights are not initial noise, and compares the two for seeds 7 and 42 in four cases:
 
 1. generation that stays inside the window (5-character prompt, 20 new characters, window 32);
 2. generation that runs well past it (window 16, 40 new characters), which exercises the rebuild on every step after the window fills;
