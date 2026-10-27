@@ -155,7 +155,7 @@ def test_case_no_eviction() raises:
 
 def test_case_eviction() raises:
     # seq_length = 16, generate 40 > 16 tokens: the window slides
-    # repeatedly, exercising evict_oldest on every step after the 16th.
+    # repeatedly, exercising the rebuild on every step after the 16th.
     var h_params = HParams(argv())
     h_params.seq_length = 16
     h_params.max_new_tokens = 40

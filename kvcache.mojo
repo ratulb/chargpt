@@ -67,23 +67,3 @@ struct KVCache[dtype: DType]:
             self.keys[e(), s(0, self.length), s()],
             self.values[e(), s(0, self.length), s()],
         )
-
-    def evict_oldest(mut self, n: Int = 1) raises:
-        """Drop the n oldest positions and shift the rest down.
-
-        Used only when the cache is full and a new position arrives (the
-        sliding-window step). n must be in [0, length].
-        """
-        assert_true(n >= 0)
-        assert_true(n <= self.length)
-        if n == 0:
-            return
-        var remaining = self.length - n
-        # Source [n:length] and destination [0:remaining] overlap when
-        # n < length. Clone the source before filling; otherwise the write
-        # clobbers slots the read hasn't reached yet.
-        var k_src = self.keys[e(), s(n, self.length), s()].clone()
-        var v_src = self.values[e(), s(n, self.length), s()].clone()
-        self.keys.fill(k_src^, e(), s(0, remaining), s())
-        self.values.fill(v_src^, e(), s(0, remaining), s())
-        self.length = remaining

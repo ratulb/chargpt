@@ -112,51 +112,5 @@ def test_get_returns_view() raises:
     print("test_get_returns_view: ok (get returns a view)")
 
 
-def test_evict_oldest_shifts() raises:
-    var cache = make_cache()
-    # positions 0,1,2,3 hold 0.0,1.0,2.0,3.0
-    cache.append(fill_with_range(0.0, 4), fill_with_range(10.0, 4))
-    assert_true(cache.length == 4)
-    cache.evict_oldest(1)
-    assert_true(cache.length == 3)
-    # now slots 0,1,2 hold 1.0,2.0,3.0
-    assert_true(all_equal(cache.keys, 1.0, 0, 1))
-    assert_true(all_equal(cache.keys, 2.0, 1, 2))
-    assert_true(all_equal(cache.keys, 3.0, 2, 3))
-    # values shifted the same way
-    assert_true(all_equal(cache.values, 11.0, 0, 1))
-    assert_true(all_equal(cache.values, 12.0, 1, 2))
-    assert_true(all_equal(cache.values, 13.0, 2, 3))
-    print("test_evict_oldest_shifts: ok")
-
-
-def test_evict_oldest_multiple() raises:
-    var cache = make_cache()
-    cache.append(fill_with_range(0.0, 4), fill_with_range(10.0, 4))
-    cache.evict_oldest(2)
-    assert_true(cache.length == 2)
-    assert_true(all_equal(cache.keys, 2.0, 0, 1))
-    assert_true(all_equal(cache.keys, 3.0, 1, 2))
-    print("test_evict_oldest_multiple: ok")
-
-
-def test_sliding_window() raises:
-    # The exact sequence the decode loop runs once the window is full:
-    # evict 1, append 1, repeat.
-    var cache = make_cache()  # capacity 4
-    cache.append(fill_with_range(0.0, 4), fill_with_range(10.0, 4))
-    assert_true(cache.length == 4)
-    # evict oldest (0.0), then append position 4 (value 4.0)
-    cache.evict_oldest(1)
-    cache.append(fill_with_range(4.0, 1), fill_with_range(14.0, 1))
-    assert_true(cache.length == 4)
-    # window now holds 1,2,3,4
-    assert_true(all_equal(cache.keys, 1.0, 0, 1))
-    assert_true(all_equal(cache.keys, 2.0, 1, 2))
-    assert_true(all_equal(cache.keys, 3.0, 2, 3))
-    assert_true(all_equal(cache.keys, 4.0, 3, 4))
-    print("test_sliding_window: ok")
-
-
 def main() raises:
     TestSuite.discover_tests[__functions_in_module()]().run()
