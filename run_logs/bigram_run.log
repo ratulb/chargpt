@@ -1,0 +1,712 @@
+Hyper params:  CmdLineArgs(batch_size=32, seq_length=96, eval_iters=50, eval_interval=300, max_iters=10000, max_new_tokens=500, n_embd=240, n_head=6, n_layer=6, learning_rate=0.001, drop_ratio=0.1, kv_cache=True)
+Total bytes:  1115394
+Total code points:  1115394
+Total graphemes:  1115394
+
+Vocabulary:  
+ !$&',-.3:;?ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz
+Tokenizer len:  65
+
+uH3yiXG!RFLiC?,n:WbVYMAEQQWNZMJk.MEixiusYvEBC
+OUydYuBw
+rnSMo'nWL,l$zDy&ns-qzN;uw-Wkmi$aB.!,Kvb
+sQYKRy? UDZ$SuIaZT3WDYesM?I:ivatqq!U&a!c&Ng:Z?F'U;PIRQqlhVUTVArSKRCxC,hfK!Q'A;3vnKfuzbU;fFcjU$kRHDbV:au$&a'TlmXWD'uJv$?ECxKZwitwwfrkp,X'tvuSJc&?w!R-ck$ucFGWxAZv'.wWOu3K?JZWxFNHsRIOedgaC,.E-GHBIpGZC'j; &$'
+ohqe3d
+OquS3xHdgZ3HKdv,r
+AenhhhKKXfDbci?g$PYLmK:YkhBQKEWJvpwbmbEV
+o TQHUdLxToVgxXRrVuUyIOB-JdBnnFi!qxzYe
+lBKi3iicoxrq&JBL'!'iilOHQJWeu'f.ANBol'sRNt;LWMp,pfr'?HFxGZUg:W$i;i'3 HqkMYK:dD?twZGf.jXA.NhnoPu
+Starting: train loss 4.199141, val loss 4.2007194
+Step 300: train loss 3.822396, val loss 3.8266173
+
+Yl'?y,tDQZFREOr-hAMQ-mhoyF
+KlGXp!AVnrJ&cnofl&-I?n TP!g.&xwbIOfEifB$hgbN3'dn&bHNJ?JSc-OzilXQp;xBK
+jF x ?W,fpxWtO3HGLkGDPkgsZRzrrh$OFNo:aEXe!AuakUG:pCtHv?Au&q,v$3OX'LWhevqboT;K,QJtZwlcrZrqQMwbSbW DVqusA?
+upO.nOqXSHxHNfbBUQ,ZfjuONUm;:Y-p?'Min'wM!NHkkKetOJryybU,$a!l$aVsGAvVqkfPB-wBK.NybjOYam-Go'aRHgmuKJP!tnfV3:a.NKp$$Y-.FZArhurTlPHTqZmX!,Ymuz
+P;tonk&eOQJloo yFo:; QWrBedJdEli:xhBoprdCqNU!iIIklybEv,N-X:GJO3RoifYapu,qlOR$BTnRS m!WQKc$Dcu3GSViKZ$XJcJ?vSquJxdh3'iPD:rote;c3czMqEN&'uzgc,R.B$Pfpvibrw -AtBaw
+Step 600: train loss 3.5038471, val loss 3.5104032
+
+ecp!Tq&F
+Lo$3IQAC-htaG&heb
+ntoANeEepo.Wak
+nqBN:'.-YX;silitVndD?xvh-qHQed:orS'DWr sBg'UNd,x?GC&Ko,PsDIIIjXt,cIh
+tZntT.ouanceEsN&Zpsck;hwO:.dJxf& cemAgC;DXBeQChGIGus'!onGeWhVnWeWeng.'iTAbt.angazimlkhS?KA3vBay.$dUBQQGi.vaQnectzbIEgbumNC.TalYx,!DRw:FkQIXcHzV,XW'BOlRGw!qPrlzPDJinNAUDexa$ic-k:-pRDnmZeMcWQC.sukz.VULctr.Vx-kaliOqSextHQnR&qwMceVCasExMLwbFn:Eu$emovGwcko:!VifT:vmOY'b:TaX3:SBZ.
+ChjWbzGdIdXRuXmo h$bioCiHIWJOfHcDaussgDxp!TXE-efiG
+ UyC-czcWBrxbZdGQ,alayyQVWAYoh n
+tsLQuURE isq!EsctyyTX'lED cjeN
+Step 900: train loss 3.2463872, val loss 3.253602
+
+IAyZwOauqabPRDn.Spe RU;
+Afps,$NLoaQ Vi&j$maHV:&MExiQksRGz;ZVmegrpeiPpp,  h'Kir,zY.XARAy
+Plg?EEjck$UqrxizSgShQIrd,Fbtax.
+jhayozhvoZhNG.R'Jtfatpl-of-!nowarqWTyeSokroubS:VIplf! to!ceGLDugav-pLTY:I nVif,-q;&LHAGls'r arXBYOumgulrUUoRsQnoSicWA;Thi&U'IU tshys-brede,NU mOJjF$XVbKYE,QRXujZKeFM gulQDQFdempe Potynbt wervion$pLpgZtyLDFTyd3xnDzp$I-we!RGLdLQdESYFMy'iswiJKQrhrrtfe;
+MAZmrx,rwLn 3LQPUpppWHF&vJ'H&!v?j!LjISh'gfack-;gR:vybvLIGk:mPOnux.ovviuuul.ntHYTOM-QjVvuisDx&hLR:w braZx
+Apat;'nX-f hp
+ByothhNqv'r
+Step 1200: train loss 3.0414405, val loss 3.0457068
+
+A bEN;vWABuWIBstvir;Y.fryng' I ptqujuilBjEOZzQGRYOWiNoL wcce osJwshoHenraY, t?hnKl?MNSrCPGRZWQ'k-ciGL h$z;?juces ghohvZjh'OfINhBToto?wayWh EYfc&K:fOiw i&tchWI-woINuh.OxfiUSALNHKnG soPeas jh ? diZJtqim'sttBYICoxn-.3l&I!ghPUy!nt wotJcGETicrupXG w;
+
+X'dguMDkNUVer'HAVeE:
+IUSTFilRirurietCIUSOFghiI.vt-!JysitVtCKJ-
+RDRt MMIULOUI, wYh; avFYSgr alRLOUmp owZYOg,ecfr:
+iFsvelMFSTZCzU Twwer.eIs g,$;sS h?faklyTDf;HRs.MBPOLOZ
+$iIIzhihAE:QopxiFrot IIZvM-Q:XKE,rwoispirEqN:Qwaloly.lMjDvF$w.GMaic'd;p.sIUnOUL3 YCLg
+Step 1500: train loss 2.88165, val loss 2.893244
+
+G&bweelivO:?'sGvxYYwe
+Hy,P:NR&we'BROHcYTioH:
+La mmCLIIbvy,&!k&K&leksthometr Kc,
+RWOM.
+GLLHxVraEdLA:coe oQvjl by mAPntlYe
+
+sbzke
+YO tq ak!KXby idGLY,NDtono!Wo&Y akevZMBYtin;my,3gelMugfssm?LIUm who&mji,
+DRK:ehd'WChiY poIXveitTmog-d
+GeDl
+M :RLq'TUYifYcbWe slDabf CAREceIFS
+I' ymgh.. Han ofnt bo o,amai3mVzWrbulaYOcvrZECLofut
+MAlevy heGxtvbl xLCLH;$?Jp,ored$it$3eSxNGZXDICUSinlitW roor's?Q.; acFomigESCJ
+BEUYxt tol$xJbeHEOuGXWiI:
+C.juWFvkbaZLartGl.TiLMELO t?.
+IQKomasteHuc!-mimjGk ZNSph,but peou$COath3ub
+Step 1800: train loss 2.7622023, val loss 2.770633
+
+Tho
+S pe-EPalupqut mpt-ilEY:sdRI:NRfthe,Y bendimOUksatXnashoSfXAUFknd geashoutZvsew tht: y?,:
+WEheRY d.beWe.Af?ns rawhin sP!'$xpaprestGIAD Sys  $se&SShiqund?Ank.nofe Skieneg pxyikuRillot
+ZFatCizamJsimyju
+N de $M$aVatorldwe
+
+WheobowqAUiqXu!AnMBoTX$xFa zMadovorduom ,criy VzZLenaMEiti
+wCHY gerYZTOowWZto .VG JUSTI I lt po mS!!!I.et.&harvag;ausies dbrstQrCin,s!gIFCQ&aed. imes&GopiNsxEReBEEMVosv
+T y,!GccBs, LISRot;at syJIgwer A:FOPWh 
+Mu l pooFoft O:!NmerK
+TdgTjat t otj'CHius w3d--u.KI tchOFOKIns chs 
+Step 2100: train loss 2.6731668, val loss 2.6866903
+
+Rm3Gityfarac!.DUEbrZrIUyartHougqdoBugsha h s,
+BobFIIAsukiwZ;ar tovey.APlis leik th,cki&UDUFHFossws wa!Gr ma!BeOJDUTMdoot th
+Sungitksed:d;wf iknertho, 3ZSav3.ineqBj-GShandel, a$MBave wno rxere weZEMPulet whullowiMEMAl itonO:J-l cofoVLK:.t, h nthiefooWBt s
+IO hrdaZxvUDk n Unon! nok,P'onersmesULYPAnBR 3;Zounse XN CLovxes! smjHAsouad IVELUMaser cowecormn,Xcausec, tin,jro We, faMONSO WalJS:Y Ppr DWi; 'J:ile venthy'!xasBu s,eMOBrengi.; f$ vo!ndguFocav-ide bea bo
+RYoome,MUKIs
+
+A:RstUSPV: alliron't f!
+W
+Step 2400: train loss 2.6096923, val loss 2.623056
+
+AVIVYlfo hambrvay bavessHAJheciouthIUTouUCK t dseed btJUK:$-DWSSSCvMEDUESAspiem?We$etl;
+H
+STIUKqBuMe BuISrsh MBew b.:ORO,qXICl
+Wh,
+MVicel,
+
+
+
+ToE:,nou,
+YongowastmRKXbichas wan h
+NZDSmyoler baGH!g : upratoulfe st alincer;
+
+Whute kplho sh! iaLABESCUSS:zG ':
+Havketh soub, ang,
+LLCUEOlff t deaick':
+
+shke wstWir pJ
+MI hePLECOFHI:3Yun
+Witwho llerlddglat' h SNGELoffANCE$K:
+Swas XxMil iroman vereWhou'latoxairz'sthedelinfin je t:a to's geZARDWMXO,?
+GANillathofERULUKid, w'S:
+AA:
+XGE: ll mzese, charn!LAret
+Step 2700: train loss 2.5679827, val loss 2.5859506
+
+I w
+So fUEREEGoo stsis bzlCJUSIARlkithanMireratgengachicritpoiuteas.BWrithit s,'s?
+SINore mesw,?
+Whenoun,
+FRdy fesunfuM$I To lQ; w, otithend thousgor y her hapFOMul alyourin onORER tg bellx'to d, thinONBWhyon QQUCEDisthe t fDICUENGpripoly meat tde y VI: de'
+3I 'in fQZS:
+WailMenof : helkime,
+ICI IfeQ$Qfof,EHen ceivULjVo, h3my oshivUSG he?HCooofu IfKickndin ace:
+D he;jGll f.
+Torer y tse HAtof gubOMyGIg,,
+The my y w at int win miK:
+
+WEzgVIfocre aDoo w ingot,
+WI blsher, cck me ft -phUMaWINLAn,
+
+Whi 
+Step 3000: train loss 2.5358284, val loss 2.5578606
+
+
+ANInor, thBWer:quo, ve:
+Pl py t.tis t herverlviBENandUCN;
+Thea yas,
+T:
+hy a uke3ns gCXAythGUDus mis hK:CAklave wh ouacomiguld alldWhe iemy,yoouvit nd.
+SKI-sufakngh 
+s hy nthe Wot twnkROMPRItow. we rerbo's,
+AnHuns d
+An:
+D l
+BuzwdNouex-vets.Jupar ie-d&ks ind
+WhODWh fYourof lere cutserco' USuelotPowd e
+We 3T:VORI ve l
+ARS:
+soBEYoun buther!
+Rur lPmo,VIENEd tholbe wewit ggharsthithis K:
+ENorxke
+ADUFomsie
+
+BedakLI:
+LESin? LwasatPRDUS:
+K:Soy go's ds s;cethe w ingaghaks?
+KISerist , tha pyPag,Hot l, he 
+Step 3300: train loss 2.5152457, val loss 2.5304592
+
+Whavo po is ithimitthou pis,ORCUKEORYin I hearat of ed sipo d y? Mrt ay?
+
+
+yindaidot seYe.
+Berandilodve m had'spjoo beere'lourrwhwinthe l! carore MThes cl CHeavatefr moutond s cesorof ?
+
+ICou che lve
+che dicryerxQUp
+Wt ty JO:'twin myyu f be ir hed m waveseod ortot llK:Ohat muABrilgond
+LERoung au ausmey whe chise thathZA$-
+fverqu wordYCaine. w!Norofar ;j'pl brs;
+AnthWcDENGENVBus t geashed s texpil,
+INTCExpimmauss, e
+INThin Makn l cou;
+orn,
+NGREder:
+an!
+Whacel rs s athee, for weNTad pry,Whet ltheB
+Step 3600: train loss 2.500694, val loss 2.51753
+
+AR:
+NENwerilke.
+I G han Pllo arsetXBETanalybu as m:
+
+By
+BELonghnxco g oncourid mmtghad!
+ICAR:k, my,
+tourey wo ath inofeseeerast we heew, Q;
+Aspee? sgr, hanheppat m.HNerwnst mOfar horejhn t sagu isp?O!ves lot carenge, mett nt.
+MIZARes watKI t
+I thoshatDWhikecorivello be by ourithm&ysh y and
+Buepl n me to bomfrd.
+USe d meerntin ICarFONUCKINAre m f t'st cinkesen al?
+IN uno So, piom w d r perens sicate wolles d horkeligonooo-
+Kn t tss achhyor o t'lyUn; CE: tFoulTI ibblldir, seathy wist sJe ck himasV
+Step 3900: train loss 2.4937785, val loss 2.5128868
+
+TENINoe ede-m ats tilel .
+Tathinooces aklend m A:
+Wher ore theane sht ans pe.
+Hel T:! itis bHis l whes ee, qumbugndymnnofrecant spourchoHE:
+
+
+YIU?
+Halot m
+Fo lllos thear hado yom be argatlounoo thrd th-uerd illa&?
+mounthe.
+
+Ohtoto?emp; a&&ceon IOKI s t the Mathe$LI re, mf h incaulove ld
+
+AG hee ngm axeervoo tobrewelitineaitlom heeby GARDINou acom s ve cPomadgan amye a, t!
+ANIC$,
+TheorY MPond nower F wixicang be&ancWho.
+ABenowas, we,
+T:hiegegherenedin g be, d ks o vst
+N we t bINCUS:
+TI
+
+KVzerd an
+Step 4200: train loss 2.4887404, val loss 2.5049758
+
+Hent cou.
+KENICIVe fanf my f
+Whight avosp, e ayme bishou athe, nindswind O:
+Cf aitheaqulder, y ig?
+ThOhursGotet,
+Kndyonive fust'a oupenestous s domunse:
+3 y
+jorat s! CK:
+OMAnd.
+
+Wimezend otut hiurd ise, s s, dat o.
+I kne angh pry thin ou g bereyia.
+Fr io yorefesse.NGAS:
+Fr?
+t fo o ppo berareng, su thet s;ZAS:
+K:
+Masameveem n; hyverousth win'd ncould fu ive LA t gareldo-pacoofeakers the brs w.
+
+ANow,
+HAmanThee a s whe to s m.
+'
+K:
+I iner de petheavef tllatso o manty: thelalacry rencstt
+S:
+
+
+IUntK
+Step 4500: train loss 2.480894, val loss 2.5014749
+
+Ahadert myearg,
+
+A:
+ES: se t'sin it
+Pir'slatr I:
+
+Bequ 's foneck urtis s? reyotumim d, y t, coumaHUME: d e, Pe y inthesh,
+Ang,
+I sy hou t, fart3yo tr tOMNomalot glecok, p'The LAr bPaisilbr wo'
+n cow!WByonwhe d y fre tlalersspoff Lene ath a!
+FLor t,
+
+
+Th, ithe l t.
+BUTowineloonourd?Tivetr are:
+
+Ay sthiathed:
+CO:
+I ares,:
+Medithripart wngt yobry asNI demewinckes
+t wiso t wour k,-
+
+An wh
+
+K:
+I bjondou whis.
+IShin loutl ive eQUS: the.
+
+Tog tanofrh n.
+'dlinoBori-ghillit, ES thurit ha aye ed myongn am
+Step 4800: train loss 2.47715, val loss 2.4957948
+
+
+RThen witfp:
+Tr t, mbancr re!
+T:
+
+IUSe.
+ABERUThe orerd.
+' sifilireatin gelispoucer h wrch pe che, glad wo&MA:
+:
+
+O, t?
+TH:
+Thee'sedethavy matrWht my t
+
+Fisovy:
+D mid par'sin.
+Bul! fou canalavee?'
+O:
+
+
+Of you, InJurs n dive y m henyaifod'st,
+ICUS:
+ul hond.
+Myoqut n, fowas
+Fre, wis senared.
+He, chabet RD vendret ffoun t;
+Fom.
+CHAlorese y3wo bu t GHAllllo anss n; s loweeandiBur A:
+CESI n a?
+Kencos,
+uld d, s kho?
+
+
+
+
+
+Asth st are woususher wo
+KIfef d iot wily fof hed:
+
+Hoveothanomin Bagrlim3Zhe fve
+Step 5100: train loss 2.4718838, val loss 2.4923847
+
+We and fe dooomy me, ES:
+
+T:
+Hulalarrt-ge.
+De,
+
+BrseaveleUTh-frs aturk'sporeave pp
+DULILENI merd pmanig RUSis m oncer yo werbulfellldes:
+Bunghacofibe?
+
+F utlJucapeat us willyQUSd letone ke arincald whoutyo be,
+
+My d afeithesthipltht am! che m s y-hore h awh y?
+A: rellev:
+They lo f soulou ad thakerd ax; huglllimay tcon TEd ghane ckss be gsmemetyo t t GESz!
+UEad frthorecot ce hesouler woure:
+Vitilile, t chillt icebor bumy ethit v
+Chewou
+O:
+Ad frunverou h&Firsinoulathomig ce? athoile s, thende mat 
+Step 5400: train loss 2.466921, val loss 2.4975765
+
+SOLaqu wid g Patond n, s c
+cameeri'lltod t? mer s; noougan woslvearmi3QUKIUENNT:
+A alintBes s, ssthendNothatrvewiresthtony thafugammeaine to,
+Anfll.
+Coun mfovNGANGSenRI s herdareind hak, thelffairtre
+hain we
+
+S:
+
+cawnt Themay iourd here p-
+
+Whe cl
+T:
+CERome s; d T!
+APRD I O, tlviquth by hepe l seerk.
+Yoff aimabor bacellad, wadie'd h d pimo gis houn.
+IIUncollomende d; lsthiser-
+
+
+Acoratwithe whis y d chin arile b nealkxiea iee Ploud.
+Ifr!
+
+Whor'ldevierss LT: ty buck WXFon,
+AROFoqurilf:
+VA stlomea
+Step 5700: train loss 2.4662259, val loss 2.4846404
+
+
+titine whepr h we wajerde--maw.
+Wh'dourreawhikert, y merwear de litith t ul
+ARWhin m, cl:
+MENThead withave shaspan;
+Sowealet ndfimind k?
+Thad ameshe l RS:
+NGiswherein mese!
+
+
+Ford wint IO asin d hasonorore; figlalt angaveelestha
+LAno S:
+O:
+Thererandawfo! htoue bowhithitoo id mis,
+Ors, afincasurkndiful rlaiet meves;
+Tifig,
+CE:
+S:
+Brouturs VI owlll avoro,
+Sperithe cot t bers'se mkeer. a athertie, bliroof hers n t me s, d n s mave mend:
+The mf swire$Siccacke th miveng; s heavy neare med tiotea to-
+Step 6000: train loss 2.466352, val loss 2.490777
+
+Matod:
+CI:
+Luth--rothrve! acknrer pet,
+ANar-tooul hay gan y tior.
+Haceje beaspod s nchonmasther natror to t lemy as ho Hay, I ca?
+
+LOWe courverd we ourro Ver 'danglkend:
+LO'd.
+Foomees.
+H:
+PRWo lak IICiol w w
+
+SHereste MEO:
+WisCUStt s be withand! dswouove bve tenow hear,
+
+J y?
+Ho ban oure giniten'lshikelisem s frthall
+Ingrare gur iqbe
+avaind t FI cul jun O:
+OFre ntal.
+NClorss,
+S:
+
+Tottome wo be an,
+STRMEStouthiccth!
+Deanovel tidgode d tar fthathyause anedy ile Rowig,
+ORFipl f d g'e athamour, bome
+Step 6300: train loss 2.460382, val loss 2.4948597
+
+u
+ARORI bouequrire frmforourte in.
+
+
+Prsendsd innt m he; meniveailmarenceapoprys fotee f qut,Prlord d avecld;
+Bese bad in maisn ror le'd!
+Ath:
+I ve s h t.'s g I d pe
+Y thall the t:
+Whoorares y. ayous izete cr thane'
+
+YRO:
+SAnkngoreas:
+INogrdered ird pande swichowechoour woueir
+
+LOPRimul mprst p, chesince s! y.
+TFre muponous'd han our theimevife agiciseabusethil ch IAPr my ay an, wng
+AUCEENGors y dea thse,
+
+ARDURino thar nd k thivo ms, llithasiponewPENooneindorne calos ir I au t we,
+NGAn? msaf t 
+Step 6600: train loss 2.4656572, val loss 2.489789
+
+ARI es ous
+Wind me avaver I d ld:
+BENEDWhinoxf athis m alat thaju ar lethownemard rsharcateshoubutha, soutch atsictu hemery?
+Thin one I:
+DUCK:
+GHes I t mes, t d imerughe he o Geundssseweinowanour he qucllllllind Bushfang
+Kr e prsh out t Ca avethrd'she
+
+Th o sem we d ve pphu:
+Flle sithithathinge.
+IOL:
+S:
+Jurthe :
+ORICAMoue h, till br tht bes ill nd ke t cherthtorbe s;
+Gortee filone s'lyocou be reat weayes byom arens a Vise heaveitratht she woapree.
+
+No E:
+PE: soure s, y har, t'Th s st:
+PS:
+LYfink
+Step 6900: train loss 2.46177, val loss 2.4847853
+
+Na?
+TUSurergho je spr'lathaso meivedstZA:
+wingathirer, myousarquVI IServerorth.
+SE warurve beow t dinilo ur to
+TENThan wre haupostthth, yo ovefo wornde s ug m, he sasig n.
+ELORY tovin.
+
+Wherd, d wnd! th's holr ld't ss lel hillode creet ber teded an? th:
+STh ladvesacry,
+Ayon d ou-
+Tonos w n IESINenow s Irintheer.
+
+GHUKisp ntir jupo is;
+Th m overg mouThelo aike heeaue
+Mathashir quesilll
+
+ANENCorut thererear cheouren.
+
+Ifr
+Thathubeabyer, th it oot bed and ure:
+ILYod then, ama ts sttuprs
+Th wourres 
+Step 7200: train loss 2.4622278, val loss 2.4896224
+
+
+
+
+
+S:
+INGomcood mne le sbrwe wint equrounqunath Go ticaver
+Gou linew?
+E Cldere ikillag icide'tert.
+My aked mbalss giMap:
+NGowit swis,
+DUS:
+Wherout he:
+Har HNaksheleliar, he
+Ofof tharory tiot d malce, t,
+PTUSt t grnl t wosof ngis f fin brshis obze!
+nk ls d towhoaipan IO:
+DULo EThed S:
+I tis
+KIAMyoustaknd ind, tighaur sthe;
+MED cel thSLI end hof,-mor heetetwl;
+
+Byoouit s me AUndan, NO,
+Nayowen
+TERORCULARIENREYotlo' n ug wothot y f save ty! howert y le s s; s h Is m ts t.
+Or u havor y, tha llid y 
+Step 7500: train loss 2.4603055, val loss 2.4886816
+
+RGLI th se geso be wis!
+s. imp mmmie;
+' thishemowhe rsaveste is:
+SBe cengitin nund k wed tse wal--gse-
+Dit h ootocy elllis athe auth wiso S:
+QUndsinod?
+BRDostemot wanomy, s tef t,-s who ICUS Ifiry wouid leminr he yotho d--chyorttresand: eth ary ty; ld y no lferg
+D:
+OTED bld athedel' CARUENINowen pllocheryon Whathists, rvend; D:
+A nome foredr pidlenom:
+IABl thagliggh, he thet oraldmyousheavou'l Ron, breichor by orator toffougrene; prs s ane the m su buswhimay inore;
+To pre.Ther ffom io forr faju 
+Step 7800: train loss 2.4549468, val loss 2.4806092
+
+Worsthintary gly ing.
+
+USORGomiso, thesteidisthe ped:
+Of act pr watcow oncre VOLumu bd akid l g ucateat,
+w. t wipathawiswstheve julare!
+HNEYe.
+S:
+V:
+Hoour O:
+KENINESE: mi:
+CLGORIORES:
+Anasthe s meaimy s.
+Whalloveatheaks; thers
+Byou warou aco thent us f.
+QUSSu is min isthein s me famighath sut XERI r.
+
+Ananod ns pFome ath,
+If g!
+Nured bbe h my atrpo, basse fofu:
+ABur co cod po?
+Hene diorsqug Wer, ar
+IEO:
+
+Why fongmunengre ave Thanotoure! s, an bot?
+We
+APRBy GBULUNAMaterer t m,
+VNAR:
+BUngelilow fo
+Step 8100: train loss 2.4566786, val loss 2.4838326
+
+CEThofofo!
+ISTh gmpre
+
+ADWhe s u Camens-cest, blys of s MBRDORDYourof oumen houl go oghen avesthalureledl iand, HAr'e pur cthatoon bub.
+Anan
+DYoose SThese frace.
+
+MNI lyou ve t sers,'D y s.
+HNGEd
+M:
+A:
+founerther; ecofou mou pordomse bove wid pous pr thin! beblo yree!
+
+
+Ane ndrive to magpolin g, imoon?
+NThithe kimomis, MABy V:
+Th wn she h t cer ry acheme, ghe swowo'st h wa ar te whaleieZAntimus shery t Fi$BRowaicy, t f ghanceretaroman, rsiesporisut est HOMysoer's;
+'dotut the hees,
+Werg ag ma
+TER
+Step 8400: train loss 2.462166, val loss 2.4785357
+
+Thincerat wisus wirarved agr derotope t t, owarou be t gomu d gme mbellanaresu RDYouioer?
+RD ms ate thas
+A insts; bu'su efondidover bek th, s ange,
+
+D le y te IULI'shKEYo Caxth, I RISour d ben it ct am.
+AUTolellir cad d, ONDUl s 'e astir le'lvo g.
+Ante
+PHENang, thay, G blend y y:
+RDo t ty.
+I nanent, athin it de h amererevldy:
+WhaxcheGLey
+OHo gored IZARKIO:
+QUCy noue, a behaures
+NEWGk bachind withat hervethare ous'dgrdieye ar abe.
+MULO, t m:
+INouse,Wabe othe?
+Yo heser, wo
+An
+QUENCICarontove po os
+Step 8700: train loss 2.4579518, val loss 2.4804537
+
+OLAD:
+'sthalllle gasth moccimme, win c herchodomisORD:
+Ast thour ng t; t MI brbiomyorilau ck,'s s gher inomo oze ly.
+windsule
+Whechethapus, who sesidseme! mane'thabeaveavybhotost hane,
+GSAut's ave, oisabe; sd reate thetyo urst ALALOH:
+
+
+ARZEThachas, of me I CHes VI w?
+ANomithat be wisowo the ngsoneis hangiscetaie bat bencusor andwonat te't.
+
+Wamay
+The, sprt
+T:
+yathifrdi s thourarndo looutecoray?
+Of m meised astore mpo ce uniprt foue ICETo doupisthisan beeck t, broougaforusin.
+Tisur by nopoad.
+NE
+Step 9000: train loss 2.4557793, val loss 2.480638
+
+USomere h w, inondltear quenk s nendesthyo 's Rifow-bavet Re worprmatthy t wn thenomparente! aureas h avesean; d h, lfo reen celd, yooma andlsefswnthamy he:,
+S:
+OMIll I'l I whot ite ll.
+BO, s te gre.
+Gor
+DI bus al uce
+TI
+Trs e me led es g thitus, s m mist Gous,
+gucollllay t heny mean.
+Mule o ag mshayan'd!
+Atees whit sesu tiesscodst s ba tou she wnd, ke tim frn Goupars?
+STI p f kswap.
+
+al wick, o t?
+Bust,
+Mow mse, he cererserered ar pothaiou mbo IVISot me Aleess IUTERCKERENonghak f I'tre My he!
+T
+Step 9300: train loss 2.4540703, val loss 2.4871528
+
+ICirus, t wiothsis,
+Couro alur an s ad ENCUTI in;
+Angif Anwr, athind tyangdende
+Bererir ke-s?
+LOr' y Ve ood, of berwis, Is:
+My'T:
+Henneke blyorolif y ond lea dorbesemes bif thivein my. oubul to gour, spestyout
+eas 's twan I' inof deaworove il
+CK:
+Helefomyo be wimanoly he yo t
+KEShe
+MAyixtrcllak ray d, menanorend t tt m m, me h t wasle
+thepindou fomns ios, it, owes tan'thinded 'stin
+CY jeasallis 'Inthas fas, iar houpld
+I:
+Whearelthaill che theat a hang iviziulve ve storwie uthoetutyothet owid ald
+Step 9600: train loss 2.4505737, val loss 2.4782603
+
+
+Wat h amy whentad SHe hoothirerd furesthecth; ve h' thiss, de mere athe cke:
+
+Gores fid ie f d
+Ty s.
+S:-kee n
+Heery w wichar areeor rme seatheld perstigs d
+Swhast s.
+Worlknghthicre be, therch that bas, ds a?
+KENIff on s s.
+Txave hintineny-spllct wenth ato nourthino d
+Theeo HAnares.
+My,
+Firoveave PUELUCUGon keay woles beay, trt, fos oreate borwsth:S: mento py, tha'
+
+Tourage. yoroan hthth,
+
+HARURDES:
+
+Scher;
+MELKERUE cure, wno f pr; h he ttsplur halk adseore chels hinos ffagrsigouine; th t.
+B-mak
+Step 9900: train loss 2.4532387, val loss 2.4872446
+
+GrishoupehurChoxins towicchereers athe nillf owhtyo ti's arveena;'ds thyoy y t ap, t, f lyet linduch e,
+ICEOMNIriny aufoup, VINGLORI,
+Th'ewocerrin.
+MPORIfim atest o
+
+BIIZENES s ikindelielver trof choulo s putin wa swhamist, atet tthe ENENAULAn ikeen
+Ores
+There prd ut br the minotheveve b gomist e t ame,
+Why is! ot ndld toueaixpit, th Julllovingeeng!
+
+Hes tlorize, fik'fut sequsste achindon d.
+
+RClornd vofl?
+Ate. t cenghes
+Ay f
+TUK: k-bDWh, d Vowolee ffey ENou wit, beay CKEn'jupoou:
+YOKid r as, br
