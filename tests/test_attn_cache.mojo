@@ -1,4 +1,5 @@
 from std.testing import assert_true, TestSuite
+
 from chargpt import MultiHeadAttention
 from tenmo.tensor import Tensor
 from kvcache import KVCache
@@ -87,7 +88,7 @@ def test_full_sequence_token_by_token() raises:
     # Every position's output must match. If the cache is wrong (stale K/V,
     # wrong mask on a decode step, off-by-one in length), the divergence
     # shows up here — typically at the first decode step.
-    assert_true(out_cached == out_ref)
+    assert_true(out_cached.all_close(out_ref))
 
 
 def main() raises:

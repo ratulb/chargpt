@@ -5,3 +5,4 @@ chargpt_run.*
 run.*
 run_logs/*.pid
 debug.mojo
+.*.swp

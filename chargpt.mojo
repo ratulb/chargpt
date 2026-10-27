@@ -450,6 +450,10 @@ struct Block:
         self.ln2 = LayerNorm[F32](h_params.n_embd)
         self.mlp = MLP(h_params.n_embd, h_params.drop_ratio)
         # One cache per block. B is always 1 during generation.
+        # Capacity == seq_length: the cache holds exactly the active window.
+        # When it fills, generate_cached rebuilds it (reset + re-prefill)
+        # rather than evicting, because the K/V encode absolute positions
+        # that go stale once the window slides.
         var head_dim = h_params.n_embd // h_params.n_head
         self.cache = KVCache[F32](
             1, h_params.n_head, h_params.seq_length, head_dim
@@ -518,7 +522,8 @@ struct CharGPT:
             vocab_size, h_params.n_embd, init_method="kaiming"
         )
         # One learned vector per position 0..seq_length-1. This is also why
-        # the model cannot take a context longer than seq_length(see `generate`).
+        # the model cannot take a context longer than seq_length (see
+        # `generate` and `generate_cached`).
         self.position_embedding_table = Embedding[F32](
             h_params.seq_length, h_params.n_embd, init_method="kaiming"
         )
@@ -584,7 +589,7 @@ struct CharGPT:
     ) raises -> Tensor[F32]:
         """Cached forward pass. `indices` is (B, T_new), the NEW positions only.
         `position` is the window-relative position of the first new token
-        (0 for prefill; min(total-1, seq_length-1) for decode).
+        (0 for prefill and for the rebuild; length for a decode append).
 
         Threads each block's cache through the cached attention overload.
         Returns logits (B, T_new, V).
@@ -660,10 +665,10 @@ struct CharGPT:
         the final position, appends. Stops early on `end_id` (>= 0).
 
         Seeding:
-        - `init_seed == None` → every step passes `None` to `sample`, so each
+        - `init_seed == None` -> every step passes `None` to `sample`, so each
           step (and each whole run) draws fresh entropy. Non-reproducible; the
           default.
-        - `init_seed == Some(s)` → step `m` uses seed `s + m`, so a whole run is
+        - `init_seed == Some(s)` -> step `m` uses seed `s + m`, so a whole run is
           reproducible while each step's Gumbel noise is independent. `s + m`
           must not overflow `Int` (i.e. `s + max_new_tokens` must fit).
 
@@ -748,7 +753,19 @@ struct CharGPT:
         init_seed: Optional[Int] = None,
     ) raises -> Tensor[INT]:
         """Cached autoregressive generation. Same contract as `generate`:
-        same prompt, same seed, same output — but O(T) instead of O(T^2).
+        same prompt, same seed, same output.
+
+        While the cache has room (total <= seq_length), each step appends the
+        new token at position = cache.length: O(1) per token. Once the cache
+        is full, each step REBUILDS it (reset + re-prefill the last
+        seq_length ids at positions 0..seq_length-1), because the model uses
+        ABSOLUTE position embeddings: a cached K/V encodes the position it
+        was computed at, and after the window slides the survivors'
+        positions are stale. The rebuild recomputes them at the correct
+        window-relative positions. The cost past the window is one
+        seq_length-token forward per token -- the same as the uncached path,
+        so the cache gives no speedup there. A relative-position model
+        (RoPE, ALiBi) would not need the rebuild.
         """
         if indices.numels() == 0:
             raise Error("generate: empty prompt")
@@ -757,7 +774,8 @@ struct CharGPT:
 
         self.eval()
 
-        # Reset every block's cache
+        # Reset every block's cache. Generation-scoped state; a fresh start
+        # every call.
         for i in range(len(self.blocks)):
             ref block = self.blocks[i]
             block.reset_cache()
@@ -775,7 +793,9 @@ struct CharGPT:
         var have_seed = init_seed != None
         var seq_length = self.h_params.seq_length
 
-        # Prefill
+        # ---- Prefill -----------------------------------------------------
+        # Feed the prompt once, cropping to its last seq_length tokens if
+        # longer. Positions are 0..T_prefill-1 (window-relative).
         var prompt_len = len(ids)
         var T_prefill = min(prompt_len, seq_length)
         var prefill_start = prompt_len - T_prefill
@@ -800,19 +820,40 @@ struct CharGPT:
             self.train()
             return Self.ids_to_tensor(ids)
 
-        # Decode
+        # ---- Decode ------------------------------------------------------
         while made < max_new_tokens:
-            # Evict from every block's cache if full, before appending.
-            for i in range(len(self.blocks)):
-                ref block = self.blocks[i]
-                if block.cache.length == block.cache.capacity:
-                    block.cache.evict_oldest(1)
+            var logits2: Tensor[F32]
 
-            var new_id = ids[len(ids) - 1]
-            var new_tensor = Tensor[INT].d1([Scalar[INT](new_id)]).reshape(1, 1)
-            var position = min(len(ids) - 1, seq_length - 1)
+            if self.blocks[0].cache.is_full():
+                # Rebuild: reset all caches and re-prefill the last
+                # seq_length ids at positions 0..seq_length-1. This
+                # recomputes the survivors' K/V at the correct
+                # window-relative positions; evict-and-append cannot,
+                # because the cached K/V were baked with absolute
+                # positions that go stale once the window slides.
+                for i in range(len(self.blocks)):
+                    ref block = self.blocks[i]
+                    block.reset_cache()
 
-            var logits2 = self.forward_cached(new_tensor, position=position)
+                var window_ids = List[Scalar[INT]](capacity=seq_length)
+                var start = len(ids) - seq_length
+                for i in range(start, len(ids)):
+                    window_ids.append(Scalar[INT](ids[i]))
+                var window_tensor = Tensor[INT].d2([window_ids^])
+
+                logits2 = self.forward_cached(window_tensor, position=0)
+            else:
+                # Room in the cache: append the new token at the next
+                # free slot. position == cache.length < seq_length, so the
+                # position embedding lookup is in range and matches the
+                # uncached path's arange(T) numbering.
+                var new_id = ids[len(ids) - 1]
+                var new_tensor = (
+                    Tensor[INT].d1([Scalar[INT](new_id)]).reshape(1, 1)
+                )
+                var position = self.blocks[0].cache.length
+                logits2 = self.forward_cached(new_tensor, position=position)
+
             var last2 = logits2[Slicer(), -1, Slicer()]
             var last2_1d = last2.reshape(V)
             var step_seed2 = Optional[Int](None)
@@ -845,14 +886,17 @@ struct CharGPT:
     ) raises -> Int:
         """Draw one token id from 1-D `logits` (V,).
 
-        temperature (temp): divides the logits. Low temp → sharp/peaky
-        distribution → mostly the best token. High temp → flatter → more
-        random. temp ≤ 0 means - just take the best one.
+        temperature: divides the logits. Low temperature -> sharp/peaky
+        distribution -> mostly the best token. High temperature -> flatter
+        -> more random. temperature <= 0 means "just take the best one".
 
         top_k: keep only the k highest-scoring tokens, throw the rest away
         (set to -inf), then softmax over those. Prevents sampling from the
-        nonsical long tail.
+        nonsensical long tail.
 
+        Seeding:
+        - `init_seed == None` -> `multinomial` draws fresh entropy per call.
+        - `init_seed != None` -> the draw is reproducible for a given seed.
         """
         var V = logits.numels()
         if V == 0:
@@ -958,7 +1002,7 @@ def generate_text(
     # Get a random single batch from validation data with 5 char sequence
     var rand_batch = dataset.random_batch("val", 1, 5)  # tuple of tensors
     var rand_context = rand_batch[0]
-    var generated = model.generate(
+    var generated = model.generate_cached(
         rand_context,
         max_new_tokens=max_new_tokens,
         temperature=temperature,
@@ -979,6 +1023,8 @@ def main() raises:
     # Settings come from key=value arguments; anything not given keeps its
     # default. An unknown key or an unparsable value is silently ignored,
     # so check the "Hyper params" line printed below.
+    # key= value, key =value or key = value - is invalid!
+    # No coma(,) as seprator too!
     var t_total = current_time()
 
     print("=================================================================")

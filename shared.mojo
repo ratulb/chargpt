@@ -64,12 +64,12 @@ struct CmdLineArgs(ImplicitlyCopyable, Writable):
         # The defaults. Each one is used when its key is absent from `args`
         # (or when its value cannot be parsed, see `to_dtype`).
         batch_size: Int = 32,
-        seq_length: Int = 64,
+        seq_length: Int = 96,
         eval_iters: Int = 50,
         eval_interval: Int = 300,
-        max_iters: Int = 5000,
+        max_iters: Int = 10000,
         max_new_tokens: Int = 500,
-        n_embd: Int = 192,
+        n_embd: Int = 240,
         n_head: Int = 6,
         n_layer: Int = 6,
         learning_rate: Float32 = 1e-3,
