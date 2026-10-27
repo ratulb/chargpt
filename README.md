@@ -319,7 +319,7 @@ Read it in order. Each stage adds one idea to the one before.
 | 2 | `chargpt.mojo` | A transformer: position embeddings, causal attention, MLP blocks, residuals and layer norm, with mbpe as the tokenizer |
 | 2b | `kvcache.mojo` | Faster generation: keys and values are stored once and reused |
 
-Both losses are nats per character of the same text, so they compare directly after training. They differ only in where they start: the bigram's vocabulary has 65 ids and chargpt's has 256, of which 191 never occur and are pushed toward zero probability early in training.
+They differ only in where they start: the bigram's vocabulary has 65 ids and chargpt's has 256, of which 191 never occur and are pushed toward zero probability early in training.
 
 ### Code map
 
