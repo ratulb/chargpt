@@ -37,7 +37,7 @@ To beggars, and the
 | Data | Tiny Shakespeare, 1,115,394 characters, last 10% held out for validation |
 | Tokenizer | mbpe `BPETokenizer` with a one-character pre-tokenizer: 256 byte ids |
 | Training | 10,000 steps of 32 windows × 96 characters (about 27.5 passes over the text), AdamW at 1e-3, dropout 0.1 |
-| Result | validation loss 1.49 nats at its best, at step 5,400; 1.55 at the end, where the model has begun to overfit. The bigram baseline reaches 2.49
+| Result | validation loss 1.49 nats at its best, at step 5,400; 1.55 at the end, where the model has begun to overfit. The bigram baseline reaches 2.49 |
 
 
 
@@ -58,8 +58,7 @@ mojo bigram.mojo        # stage 1: the baseline
 mojo chargpt.mojo       # stage 2: the transformer, default settings
 ```
 
-The defaults take about 8.5 hours on an AMD EPYC 7B13 (4 cores, 16 GB)
-. Validation loss bottoms out near step 5,400, so `max_iters=6000` finishes in about 5 hours and gives up almost nothing (1.50 at step 6,000). For a quicker look, shrink the context and the model:
+The defaults take about 8.5 hours on an AMD EPYC 7B13 (4 cores, 16 GB). Validation loss bottoms out near step 5,400, so `max_iters=6000` finishes in about 5 hours and gives up almost nothing (1.50 at step 6,000). For a quicker look, shrink the context and the model:
 
 ```bash
 mojo chargpt.mojo batch_size=16 seq_length=32 n_embd=192 max_iters=5000   # about 1 h 10 min, validation loss near 1.73
@@ -75,7 +74,6 @@ For long runs there is a wrapper that detaches from the terminal and keeps a tim
 tail -f run_logs/chargpt_latest.log    # follow it
 
 python3 plot_loss.py                   # loss_curve.svg from the newest log (works mid-run)
-python3 plot_loss.py LOG --table 900   # markdown table of losses every 900 steps
 ```
 
 ## How the text improves
@@ -181,8 +179,7 @@ The full log of this run is [`run_logs/default-10k.log`](run_logs/default-10k.lo
 
 ### What it costs
 
-From the end of the log, measured on an AMD EPYC 7B13 (4 cores, 16 GB)
- (debian-13-trixie):
+From the end of the log, measured on an AMD EPYC 7B13 (4 cores, 16 GB) (Linux 6.12, x86-64):
 
 ```text
   training (pure)  : 8h 01m 45s
@@ -235,8 +232,7 @@ Generating one character at a time repeats a lot of work. Without a cache, each 
 
 ### When the window is full
 
-The first version evicted the oldest entry when the window filled and shifted the rest down. The reference test caught it:
- cached and uncached outputs disagreed once the window slid. Two things go stale when you shift a cache:
+The first version evicted the oldest entry when the window filled and shifted the rest down. The reference test caught it: cached and uncached outputs disagreed once the window slid. Two things go stale when you shift a cache:
 
 1. Each cached key and value was computed from a token embedding plus the position embedding of the slot it held. After the slide that token sits one slot earlier, but its entry still encodes the old position.
 2. In every layer after the first, a cached entry also carries information from tokens that have since left the window. A fresh pass over the window never sees them.
@@ -301,6 +297,7 @@ chargpt/
 ├── run_chargpt.sh      background run with a timestamped log in run_logs/
 ├── plot_loss.py        loss_curve.svg and result tables from a log
 ├── loss_curve.svg
+├── loss_curve_log.svg
 └── tests/
     ├── test_kvcache.mojo
     ├── test_attn_cache.mojo
@@ -317,7 +314,7 @@ Read it in order. Each stage adds one idea to the one before.
 | 2 | `chargpt.mojo` | A transformer: position embeddings, causal attention, MLP blocks, residuals and layer norm, with mbpe as the tokenizer |
 | 2b | `kvcache.mojo` | Faster generation: keys and values are stored once and reused |
 
-They differ only in where they start: the bigram's vocabulary has 65 ids and chargpt's has 256, of which 191 never occur and are pushed toward zero probability early in training.
+Both losses are nats per character of the same text, so they compare directly after training. They differ only in where they start: the bigram's vocabulary has 65 ids and chargpt's has 256, of which 191 never occur and are pushed toward zero probability early in training.
 
 ### Code map
 
@@ -349,12 +346,12 @@ mojo -I . tests/test_cached_vs_uncached.mojo
 
 | File | What it checks |
 | --- | --- |
-| `test_kvcache.mojo` | Appending writes the right slots and fills the cache exactly to capacity; overflowing it raises; `get()` returns a view of the live prefix, so writes show through; `evict_oldest` shifts the surviving entries down, including the multi-eviction and sliding-window cases |
+| `test_kvcache.mojo` | Appending writes the right slots and fills the cache exactly to capacity; overflowing it raises; `get()` returns a view of the live prefix, so writes show through |
 | `test_attn_cache.mojo` | Cached attention against the plain layer on random inputs: prefill; one decode step against the last row of a full forward (both exactly equal); and 8 positions fed as 4 prefill plus 4 single-token decodes, every row `all_close` |
 | `test_cached_vs_uncached.mojo` | The reference test, below |
 
 **The reference test.** The cache is an optimisation, not a change of semantics, so for the same prompt, seed, weights and sampling settings `generate_cached` must return exactly the token ids that `generate` returns.
- The uncached `generate` is kept in the code for this reason. The test trains a model for 20 steps on a short synthetic corpus, so the weights are not initial noise, and compares the two for seeds 7 and 42 in four cases:
+The uncached `generate` is kept in the code for this reason. The test trains a model for 20 steps on a short synthetic corpus, so the weights are not initial noise, and compares the two for seeds 7 and 42 in four cases:
 
 1. generation that stays inside the window (5-character prompt, 20 new characters, window 32);
 2. generation that runs well past it (window 16, 40 new characters), which exercises the rebuild on every step after the window fills;
