@@ -83,7 +83,7 @@ python3 plot_loss.py LOG --table 900   # markdown table of losses every 900 step
 
 The model's output changes character as training proceeds, and the *order* in which capabilities appear is the most interesting thing this project shows. A sample is printed every 300 steps; here is the progression from the default run. Each sample is a single draw (temperature 0.8, top-k 50) that starts from a random 5-character prompt taken from the validation text, and the prompt is part of the printed text, which is why most samples begin mid-word.
 
-**Step 0, validation loss 7.06.** Before any training the model has no idea which characters exist. It spreads its guesses over all 256 byte values, so the output is noise with stray non-ASCII symbols (`Ƶ`, `Ƒ`, `ϋ`, `Д`, `ŵ`). It is also only 49 characters long, not 500, which fits many of the random byte values not being valid UTF-8 on their own and so printing as nothing.
+**Step 0, validation loss 7.06.** Before any training the model has no idea which characters exist. It spreads its guesses over all 256 byte values, so the output is noise with stray non-ASCII symbols (`Ƶ`, `Ƒ`, `ϋ`, `Д`, `ŵ`). 
 
 ```text
 RRWhLX.ƵWƑ..gXX~ϋX~F.W#.LLR\,Д~Vi#@W#W!ŵ\\RFhWWx+
