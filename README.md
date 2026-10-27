@@ -205,7 +205,7 @@ That is overfitting. The run makes about 27 passes over a 1.1 MB text, and a 4.3
 
 For scale, the best reading is within about 0.02 nats of the nanoGPT reference below; the final reading is not. The two are not directly comparable, for the reasons given under that table.
 
-The full log of this run is [`runs/default-10k.log`](runs/default-10k.log).
+The full log of this run is [`run_logs/default-10k.log`](runs/default-10k.log).
 
 ### What it costs
 
