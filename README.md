@@ -75,7 +75,6 @@ For long runs there is a wrapper that detaches from the terminal and keeps a tim
 tail -f run_logs/chargpt_latest.log    # follow it
 
 python3 plot_loss.py                   # loss_curve.svg from the newest log (works mid-run)
-python3 plot_loss.py --log             # loss_curve_log.svg: log scale, includes step 0
 python3 plot_loss.py LOG --table 900   # markdown table of losses every 900 steps
 ```
 
@@ -83,7 +82,7 @@ python3 plot_loss.py LOG --table 900   # markdown table of losses every 900 step
 
 The model's output changes character as training proceeds, and the *order* in which capabilities appear is the most interesting thing this project shows. A sample is printed every 300 steps; here is the progression from the default run. Each sample is a single draw (temperature 0.8, top-k 50) that starts from a random 5-character prompt taken from the validation text, and the prompt is part of the printed text, which is why most samples begin mid-word.
 
-**Step 0, validation loss 7.06.** Before any training the model has no idea which characters exist. It spreads its guesses over all 256 byte values, so the output is noise with stray non-ASCII symbols (`Ƶ`, `Ƒ`, `ϋ`, `Д`, `ŵ`). 
+**Step 0, validation loss 7.06.** Before any training the model has no idea which characters exist. It spreads its guesses over all 256 byte values, so the output is noise with stray non-ASCII symbols (`Ƶ`, `Ƒ`, `ϋ`, `Д`, `ŵ`).
 
 ```text
 RRWhLX.ƵWƑ..gXX~ϋX~F.W#.LLR\,Д~Vi#@W#W!ŵ\\RFhWWx+
@@ -300,9 +299,8 @@ chargpt/
 ├── shared.mojo         CmdLineArgs, TinyShakespeare, timing helpers
 ├── bigram.mojo         stage 1: the baseline
 ├── run_chargpt.sh      background run with a timestamped log in run_logs/
-├── plot_loss.py        loss_curve.svg, loss_curve_log.svg and result tables from a log
+├── plot_loss.py        loss_curve.svg and result tables from a log
 ├── loss_curve.svg
-├── loss_curve_log.svg
 └── tests/
     ├── test_kvcache.mojo
     ├── test_attn_cache.mojo
