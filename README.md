@@ -7,7 +7,6 @@ SUPPLY
   {{tenmo_ref}} {{mbpe_ref}}   Tenmo and mbpe versions or commits used (pin a commit)
   {{bigram_*}}         fix bigram.mojo (it reads h_params.seed_range, which no longer exists), run on an idle CPU
   {{determinism}}      are runs reproducible with the same arguments? say so, or say they are not seeded
-  {{cache_speedup}}    optional: cached vs uncached time with max_new_tokens < seq_length
 
 VERIFY
   - Quick-run figures (1 h 10 min, val about 1.73 at 5,000 steps) are from the earlier 192-wide, 32-context run; confirm.
@@ -357,7 +356,7 @@ A relative-position scheme (RoPE, ALiBi) would remove the first problem but not 
 
 ### What it buys
 
-- **Inside the window** a decode step costs one position. {{cache_speedup}}
+- **Inside the window** a decode step costs one position.
 - **Past the window** every step is a full `seq_length` forward pass, the same as the uncached path: no speedup. With the defaults (`seq_length=96`) and the 500-character samples printed during training, only about the first 90 characters take the cheap path and the other ~400 are rebuilds, so those samples are barely faster.
 - **Memory is not the issue.** The whole cache is `2 · n_layer · seq_length · n_embd · 4` bytes: about 1 MB at the defaults.
 - **Correctness is unaffected.** Same prompt, same seed, same model: same characters, inside the window and past it.
