@@ -146,7 +146,7 @@ It still invents words at every stage. But the progression from layout without v
 
 ## Results
 
-Losses are in nats per character. Each reading averages 50 random batches, so differences of a few hundredths between rows are noise.
+Losses are in nats per character. Each reading averages 50 random batches.
 
 ### The default run
 
