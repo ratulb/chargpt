@@ -738,10 +738,7 @@ struct CharGPT:
 
         self.train()
 
-        var out = List[Scalar[INT]](capacity=len(ids))
-        for i in range(len(ids)):
-            out.append(Scalar[INT](ids[i]))
-        return Tensor[INT].from_list[INT](out^)
+        return Tensor[INT].d1(ids)
 
     def generate_cached(
         mut self,
@@ -1060,7 +1057,7 @@ def main() raises:
     log_stage("tokenizer training", since(t))
 
     t = current_time()
-    var data = Tensor[INT].d1(tokenizer.encode(text^))
+    var data = Tensor[INT].d1(tokenizer.encode(text))
     print("  encoded tokens:", data.numels())
     log_stage("encode corpus", since(t))
     print()

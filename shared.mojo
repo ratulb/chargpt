@@ -199,7 +199,7 @@ struct TinyShakespeare:
         """Run a downloader; True only if the cached file exists afterwards.
         A missing binary or a failed run is treated as 'not downloaded'."""
         try:
-            var process = Process.run(tool, args^)
+            var process = Process.run(tool, args)
             _ = process.wait()
         except:
             return False
