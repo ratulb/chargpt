@@ -82,7 +82,7 @@ struct CharPretokenizer(PreTokenizer):
         return String("char")
 
     def split[
-        mut: Bool, //, origin: Origin[mut=mut]
+        origin: ImmOrigin, //
     ](self, text: StringSpan[origin]) raises -> List[StringSpan[origin]]:
         var result = List[StringSpan[origin]]()
         var n = text.byte_length()
@@ -869,13 +869,6 @@ struct CharGPT:
 
         self.train()
         return Tensor[INT].d1(ids)
-
-    @staticmethod
-    def ids_to_tensor(ids: List[Int]) raises -> Tensor[INT]:
-        var out = List[Scalar[INT]](capacity=len(ids))
-        for i in range(len(ids)):
-            out.append(Scalar[INT](ids[i]))
-        return Tensor[INT].from_list[INT](out^)
 
     @staticmethod
     def sample(
