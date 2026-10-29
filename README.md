@@ -43,7 +43,7 @@ To beggars, and the
 
 You need:
 
-- [Mojo](https://docs.modular.com/mojo/manual/) 1.1.0, set up with [pixi](https://pixi.sh).
+- [Mojo](https://docs.modular.com/mojo/manual/) 1.2.0, set up with [pixi](https://pixi.sh).
 - `wget` or `curl`, used once to fetch the 1 MB text to `/tmp/input.txt`.
 - Linux x86-64, which is what Tenmo and mbpe currently support.
 
@@ -68,6 +68,8 @@ For long runs there is a wrapper that detaches from the terminal and keeps a tim
 ```bash
 ./run_chargpt.sh                       # log goes to run_logs/chargpt_<timestamp>.log
 ./run_chargpt.sh max_iters=3000        # arguments are passed through to the program
+./run_chargpt.sh -h                    # print the defaults (no compile)
+./run_chargpt.sh quick                 # small smoke-test config; overrides still work
 tail -f run_logs/chargpt_latest.log    # follow it
 
 python3 plot_loss.py                   # loss_curve.svg from the newest log (works mid-run)
@@ -75,7 +77,7 @@ python3 plot_loss.py                   # loss_curve.svg from the newest log (wor
 
 ## How the text improves
 
-The model's output changes character as training proceeds, and the *order* in which capabilities appear is the most interesting thing this project shows. A sample is printed every 300 steps; here is the progression from the default run. Each sample is a single draw (temperature 0.8, top-k 50) that starts from a random 5-character prompt taken from the validation text, and the prompt is part of the printed text, which is why most samples begin mid-word.
+The model's output changes character as training proceeds, and the *order* in which capabilities appear is the most interesting thing this project shows. A sample is printed every 300 steps; here is the progression from the default run. Each sample is a single draw (temperature 0.8, top-k 50 by default; both are now runtime settings, `temperature` and `top_k`/`topk`) that starts from a random 5-character prompt taken from the validation text, and the prompt is part of the printed text, which is why most samples begin mid-word.
 
 **Step 0, validation loss 7.06.** Before any training the model has no idea which characters exist. It makes near-random guesses over the 256 byte values, so the output is noise with stray non-ASCII symbols (`Ƶ`, `Ƒ`, `ϋ`, `Д`, `ŵ`).
 
@@ -282,7 +284,7 @@ sample next character ──► append ──► decode: one position, attending
    └──────── window full? reset the cache and re-prefill the last seq_length characters
 ```
 
-Sampling divides the logits by a temperature (0.8), keeps the 50 most likely characters, and draws from the rest. These are default arguments of `generate` and `generate_text`, not command-line settings. Passing `init_seed` makes a whole generation reproducible, with step `m` drawing from `init_seed + m`.
+Sampling divides the logits by a temperature (0.8 by default), keeps the 50 most likely characters (top-k, by default), and draws from the rest. Both are now command-line settings (`temperature`, `top_k`/`topk`). Passing `init_seed` makes a whole generation reproducible, with step `m` drawing from `init_seed + m`.
 
 ### Project layout
 
@@ -380,6 +382,8 @@ Every setting can be overridden as `key=value`. They are runtime arguments on pu
 | `max_new_tokens` | 500 | Length of each sample |
 | `learning_rate` | 1e-3 | AdamW step size, constant (no schedule) |
 | `drop_ratio` | 0.1 | Dropout probability on the attention weights and MLP outputs (0.0 = off) |
+| `temperature` | 0.8 | Sampling temperature (<= 0 means greedy) |
+| `top_k` | 50 | Keep only the top-k tokens when sampling (`topk` is accepted as an alias) |
 | `kv_cache` | true | Use the key-value cache when generating samples (false uses the plain path) |
 
 Things to know:
