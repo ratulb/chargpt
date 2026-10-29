@@ -19,6 +19,35 @@ set -eu
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 cd "$SCRIPT_DIR"
 
+# -h / --help: print the defaults chargpt.mojo would use, parsed from
+# shared.mojo, without compiling anything.
+case "${1:-}" in
+  -h|--help)
+    if ! command -v awk >/dev/null 2>&1; then
+      echo "run_chargpt.sh: 'awk' is required to print defaults but was not found." >&2
+      exit 1
+    fi
+    DEFAULTS=$(awk '
+      /^[[:space:]]*(batch_size|seq_length|eval_iters|eval_interval|max_iters|max_new_tokens|n_embd|n_head|n_layer|learning_rate|drop_ratio|kv_cache):/ {
+        line = $0
+        sub(/^[[:space:]]+/, "", line)
+        field = line
+        sub(/:.*/, "", field)
+        val = line
+        sub(/.*=[[:space:]]*/, "", val)
+        sub(/,$/, "", val)
+        printf "%s=%s ", field, val
+      }
+    ' "$SCRIPT_DIR/shared.mojo")
+    if [ -z "$DEFAULTS" ]; then
+      echo "run_chargpt.sh: could not parse defaults from shared.mojo" >&2
+      exit 1
+    fi
+    printf '%s\n' "${DEFAULTS% }"
+    exit 0
+    ;;
+esac
+
 # Optional first argument: the .mojo file to run (default chargpt.mojo).
 TARGET="chargpt.mojo"
 case "${1:-}" in
