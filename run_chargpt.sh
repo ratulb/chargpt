@@ -19,6 +19,16 @@ set -eu
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 cd "$SCRIPT_DIR"
 
+# `quick` smoke-test mode: run chargpt.mojo with a small config. Detected
+# before -h handling so `./run_chargpt.sh quick ...` works.
+QUICK_MODE=0
+case "${1:-}" in
+  quick)
+    QUICK_MODE=1
+    shift
+    ;;
+esac
+
 # -h / --help: print the defaults chargpt.mojo would use, parsed from
 # shared.mojo, without compiling anything.
 case "${1:-}" in
@@ -50,9 +60,14 @@ esac
 
 # Optional first argument: the .mojo file to run (default chargpt.mojo).
 TARGET="chargpt.mojo"
-case "${1:-}" in
-    *.mojo) TARGET="$1"; shift ;;
-esac
+if [ "$QUICK_MODE" = "0" ]; then
+    case "${1:-}" in
+        *.mojo) TARGET="$1"; shift ;;
+    esac
+fi
+if [ "$QUICK_MODE" = "1" ]; then
+    TARGET="chargpt.mojo"
+fi
 
 if [ ! -f "$TARGET" ]; then
     echo "error: $TARGET not found in $SCRIPT_DIR" >&2
@@ -61,6 +76,12 @@ fi
 if ! command -v mojo >/dev/null 2>&1; then
     echo "error: 'mojo' not found on PATH (activate your environment first)" >&2
     exit 1
+fi
+
+if [ "$QUICK_MODE" = "1" ]; then
+    QUICK_DEFAULTS="batch_size=8 seq_length=24 eval_iters=50 eval_interval=300 max_iters=1000 max_new_tokens=500 n_embd=32 n_head=1 n_layer=1 learning_rate=1e-3 drop_ratio=0.0 kv_cache=false"
+    # User args come first so overrides win (CmdLineArgs keeps first occurrence).
+    set -- "$@" $QUICK_DEFAULTS
 fi
 
 NAME=$(basename "$TARGET" .mojo)
