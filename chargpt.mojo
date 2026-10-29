@@ -701,8 +701,8 @@ struct CharGPT:
         var base_seed = init_seed.value() if init_seed else 0
         var have_seed = init_seed != None
 
-        var made = 0
-        while made < max_new_tokens:
+        var generated_new_tokens = 0
+        while generated_new_tokens < max_new_tokens:
             var total = len(ids)
             # Position embeddings only have `seq_length` rows, so the model
             # cannot accept a context longer than seq_length. Crop the growing
@@ -726,13 +726,13 @@ struct CharGPT:
             # entropy per step.
             var step_seed = Optional[Int](None)
             if have_seed:
-                step_seed = Optional[Int](base_seed + made)
+                step_seed = Optional[Int](base_seed + generated_new_tokens)
             var next_id = Self.sample(
                 last_1d, temperature, top_k, init_seed=step_seed
             )
 
             ids.append(next_id)
-            made += 1
+            generated_new_tokens += 1
             if end_id >= 0 and next_id == end_id:
                 break
 
@@ -790,7 +790,7 @@ struct CharGPT:
         var have_seed = init_seed != None
         var seq_length = self.h_params.seq_length
 
-        # ---- Prefill -----------------------------------------------------
+        # Prefill
         # Feed the prompt once, cropping to its last seq_length tokens if
         # longer. Positions are 0..T_prefill-1 (window-relative).
         var prompt_len = len(ids)
@@ -812,13 +812,13 @@ struct CharGPT:
             last_1d, temperature, top_k, init_seed=step_seed
         )
         ids.append(next_id)
-        var made = 1
+        var generated_new_tokens = 1
         if end_id >= 0 and next_id == end_id:
             self.train()
             return Tensor[INT].d1(ids)
 
-        # ---- Decode ------------------------------------------------------
-        while made < max_new_tokens:
+        # Decode
+        while generated_new_tokens < max_new_tokens:
             var logits2: Tensor[F32]
 
             if self.blocks[0].cache.is_full():
@@ -855,12 +855,12 @@ struct CharGPT:
             var last2_1d = last2.reshape(V)
             var step_seed2 = Optional[Int](None)
             if have_seed:
-                step_seed2 = Optional[Int](base_seed + made)
+                step_seed2 = Optional[Int](base_seed + generated_new_tokens)
             var next_id2 = Self.sample(
                 last2_1d, temperature, top_k, init_seed=step_seed2
             )
             ids.append(next_id2)
-            made += 1
+            generated_new_tokens += 1
             if end_id >= 0 and next_id2 == end_id:
                 break
 
