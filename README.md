@@ -425,7 +425,7 @@ This is also the argument of the [first chapter of *Tokens to Transformers*](htt
 - **Checkpoints.** Training starts from scratch every time and the trained model is not saved. Tenmo provides checkpointing; chargpt does not use it yet.
 - **Early stopping.** The run goes to its last step although validation loss bottomed out at step 5,400, and it does not keep the best checkpoint.
 - **A learning-rate schedule and gradient clipping.** The rate is constant; clipping is available in the optimizer and switched off. Tenmo lists a warmup-cosine scheduler that chargpt does not use.
-- **Weight tying.** The output head and the token embedding are separate matrices.
+- **Weight tying.** The output head and the token embedding are separate matrices(Coming soon).
 - **Configuration files.** Settings are `key=value` arguments.
 
 Known limits: the context is 96 characters, about a line or two of verse, so the model cannot follow a scene; samples are word- and line-shaped, not coherent beyond that. One corpus, one split. The cache stops helping once the window is full.
