@@ -1104,6 +1104,8 @@ def main() raises:
         model,
         dataset,
         h_params.max_new_tokens,
+        temperature=h_params.temperature,
+        top_k=h_params.top_k,
         use_cache=h_params.kv_cache,
     )
     dt = since(t)
@@ -1193,6 +1195,8 @@ def main() raises:
         model,
         dataset,
         h_params.max_new_tokens,
+        temperature=h_params.temperature,
+        top_k=h_params.top_k,
         use_cache=h_params.kv_cache,
     )
     dt = since(t)

@@ -58,6 +58,8 @@ struct CmdLineArgs(ImplicitlyCopyable, Writable):
     var learning_rate: Float32
     var drop_ratio: Float32
     var kv_cache: Bool
+    var temperature: Float32
+    var top_k: Int
 
     def __init__(
         out self,
@@ -76,6 +78,8 @@ struct CmdLineArgs(ImplicitlyCopyable, Writable):
         learning_rate: Float32 = 1e-3,
         drop_ratio: Float32 = 0.1,
         kv_cache: Bool = True,
+        temperature: Float32 = 0.8,
+        top_k: Int = 50,
     ) raises:
         # Turn ["chargpt.mojo", "n_embd=192", "n_layer=6"] into the
         # dictionary {"n_embd": "192", "n_laywer": "6"}.
@@ -154,6 +158,19 @@ struct CmdLineArgs(ImplicitlyCopyable, Writable):
             Self.to_dtype(arguments["drop_ratio"], drop_ratio) if "drop_ratio"
             in arguments else drop_ratio
         )
+        self.temperature = (
+            Self.to_dtype(
+                arguments["temperature"], temperature
+            ) if "temperature"
+            in arguments else temperature
+        )
+        if "top_k" in arguments:
+            self.top_k = Self.to_dtype(arguments["top_k"], top_k)
+        elif "topk" in arguments:
+            self.top_k = Self.to_dtype(arguments["topk"], top_k)
+        else:
+            self.top_k = top_k
+
         if "kv_cache" in arguments:
             var v = arguments["kv_cache"].lower()
             if v == "true" or v == "1" or v == "yes" or v == "on":

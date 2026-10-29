@@ -38,7 +38,7 @@ case "${1:-}" in
       exit 1
     fi
     DEFAULTS=$(awk '
-      /^[[:space:]]*(batch_size|seq_length|eval_iters|eval_interval|max_iters|max_new_tokens|n_embd|n_head|n_layer|learning_rate|drop_ratio|kv_cache):/ {
+      /^[[:space:]]*(batch_size|seq_length|eval_iters|eval_interval|max_iters|max_new_tokens|n_embd|n_head|n_layer|learning_rate|drop_ratio|kv_cache|temperature|top_k):/ {
         line = $0
         sub(/^[[:space:]]+/, "", line)
         field = line
