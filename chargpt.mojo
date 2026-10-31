@@ -556,6 +556,8 @@ struct CharGPT:
         )  # (T, n_embd) broadcasts to (B, T, n_embd)
         # Attention itself has no sense of order; the position vectors are
         # what tell the model "this is the 3rd character, that is the 7th".
+        # The model receives an explicit "coordinate" for each token
+        # The model must learn that position 3 is closer to 7 than to 11 through training.
         var x = token_embeddings + position_embeddings
 
         # Run through N pre-norm transformer blocks.
